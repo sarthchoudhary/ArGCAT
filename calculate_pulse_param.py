@@ -54,6 +54,7 @@ def find_clean_wfs( pyreco_manager, catalogue_filename:str, \
     for event_index in trange(n_events, colour='blue'): #TODO: uncomment
     # for event_index in trange(100, colour='blue'): # diag
         og_wf = wf[event_index]
+        ## This part makes use of ARMA filter
         flt = np.reshape(mfilter.numba_fast_filter(og_wf), newshape=og_wf.shape) # TODO: variable names
         mas = pyreco_manager.algos.running_mean(flt, gate=60)
         flt_proc = np.copy(flt)
@@ -100,7 +101,7 @@ def find_clean_wfs( pyreco_manager, catalogue_filename:str, \
 
 def pulse_template(t, t0, sigma, tau, scale, baseline, K) -> np.ndarray:
     ''' 
-    ARMA template.
+    Pulse template.
     t0 - offset
     K - scalar multiplication factor for matching data
     '''
