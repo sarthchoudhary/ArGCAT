@@ -1,25 +1,29 @@
 ,g_mean,g_sigma,g_k
-Ch2 from default ARMA,,,
+ch2 from default ARMA,,,
 Sigma,2.046,0.4685,522.6
 Tau,47.09,7.556,7367
 Scale,0.8994,0.04746,50.58
-Ch1 from default ARMA,,,
+ch1 from default ARMA,,,
 Sigma,1.799,0.3899,1239
 Tau,47.87,6.291,1.898e+04
 Scale,0.9026,0.04027,153.1
-Ch0 from default ARMA,,,
+ch0 from default ARMA,,,
 Sigma,1.8,0.33,2129,
 Tau,46.9,6.111,3.717e+04
 Scale,0.8966,0.05558,343
-Ch1 from ch2 data ARMA,,,
+ch2 from ch2 data ARMA,,,
+Sigma,2.025,0.5084,618.1
+Tau,47.43,8.079,8967
+Scale,0.8987,0.04809,60.04
+ch1 from ch2 data ARMA,,,
 Sigma,1.838,0.5918,2016
 Tau,48.1,6.552, 22620
 Scale,0.8902,0.03633,134.3
-Ch0 from ch2 data ARMA,,,
+ch0 from ch2 data ARMA,,,
 Sigma,1.799,0.328,2183
 Tau,47.48,6.434,4.109e+04
 Scale,0.8945,0.03889,265.5
-Ch1 from ch1 data ARMA,,,
+ch1 from ch1 data ARMA,,,
 Sigma,1.829,0.4324,1455
 Tau,48.05,6.543,2.113e+04
 Scale,0.9021,0.04083,167.7
