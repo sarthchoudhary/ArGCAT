@@ -18,12 +18,6 @@ To satify all requirements do these:
 wf search script consumes a lot of computing resources, it should only be executed on an interactive node or submitted as a slurm job.\
 <span style="color: yellow"> Warning: </span> The code probably won't be able to complete execution on a login node. This is your only warning!
 
-**Computing resources:**\
-wf search script consumes a lot of computing resources, it should only be executed on an interactive node or submitted as a slurm job.
-
-**Computing resources:**\
-wf search script consumes a lot of computing resources, it should only be executed on an interactive node or submitted as a slurm job.
-
 **Data Processing:**\
 There are several tools available for data processing:
 - create_event_catalogue.py\
@@ -34,6 +28,17 @@ There are several tools available for data processing:
     - Channelwise concatenation of events from several runs
     - Performs histogramming on fit parameters, applies cut, and fits gaussian to the resultant histogram.
     - Makes Fingerplots from concatenated fit catalogues. The instructions for generating finger plots will be provided in a separate document.
+    - Also, calculates the SPE charge and SNR from the data. 
+
+    - **Special: self consistency of ARMA filter based approach**\
+        - We want to see if the pulses found using calculate_pulse_param.py with a specific set of ARMA parameters would yield back the same set of ARMA parameters. 
+        1. keep the argset.ini at default values of ARMA filter.
+        1. run the calculate_pulse_param.py script
+        1. process the fit_catalogue with histogram_pulse_param.ipynb. Fine tune the fitter and find the optimum value of pulse parameters.
+        1. Use these parameter in argset.ini (sigma and tau should be multiplied by 4 ns)
+        1. run the calculate_pulse_param.py script again
+        1. process the fit_catalogue with histogram_pulse_param.ipynb. Fine tune the fitter and find the optimum value of pulse parameters.
+        1. verify that parameters found in previous step are similar to parameters in step 3.
 
 **Catalogue:**\
 The eventwise data products are catalogued in form of pandas DataFrames. I call these catalogues. The catalogue for all channels are packaged together as a python dict and written to disk as pickle file.\
