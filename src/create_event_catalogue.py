@@ -1,3 +1,4 @@
+### srun --mem=16G -A bejger-grp -p dgx --pty bash
 import sys
 sys.settrace
 import numpy as np
@@ -8,19 +9,19 @@ from pyreco.manager.manager import Manager
 from time import perf_counter
 # import h5py
 from os import path
-
+import glob
 
 def create_event_catalogue(dir_name:str, filename:str, output_dir:str) -> None:
 
     file_path = path.join(dir_name, filename)
     file_basename = filename.split(sep='.')[0]
-    outfile = 'temPyR00124'
+    outfile = 'temPyR00156'
     # confile = 'argset.ini'
     confile = 'argset_custom.ini'
     cmdline_args = f'--config {confile} -o {outfile} -i {file_path}'
     pyreco_manager = Manager( midas=True, cmdline_args=cmdline_args)
 
-    pbar = tqdm(total = 110002, colour='blue')
+    # pbar = tqdm(total = 110002, colour='blue')
 
     event_counter_ls = []
     wf_ls = []
@@ -43,8 +44,8 @@ def create_event_catalogue(dir_name:str, filename:str, output_dir:str) -> None:
 
         # if event_index > 10: # diag
         #     break
-        pbar.update(1)
-    pbar.close()
+        # pbar.update(1)
+    # pbar.close()
 
     if file_format == 'pkl':
         event_dict = {
@@ -78,12 +79,13 @@ def create_event_catalogue(dir_name:str, filename:str, output_dir:str) -> None:
 
 def main() -> None:
     dir_name = '/work/sarthak/argset/data/' #TODO dynmic
-    # filename = 'run00061.mid.lz4'
-    # filename = 'run00052.mid.lz4'
-    # create_event_catalogue(dir_name, filename, output_dir)
-    output_dir = '/work/sarthak/argset/data/event_catalogues'
-    # files_ls = ['run00108.mid.lz4']
-    files_ls = ['run00124.mid.lz4']
+    output_dir = '/work/chuck/sarthak/argset/event_catalogues'
+    # files_ls = ['run00110.mid.lz4', 'run00129.mid.lz4', 'run00130.mid.lz4']
+    # files_ls = ['run00124.mid.lz4',] 
+    # files_ls = ['run00126.mid.lz4']
+    file_path_ls = glob.glob(f"/work/sarthak/argset/data/{'run00154*.mid.lz4'}")
+    stripper_function = lambda str1: str1.split('/')[-1]
+    files_ls = list(map(stripper_function, file_path_ls))
     for filename in files_ls:
         create_event_catalogue(dir_name, filename, output_dir)
 
