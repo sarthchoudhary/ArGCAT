@@ -1,20 +1,33 @@
+## ----------------------------------------- setting-up libraries -----------------------------------------
 from time import perf_counter
 t0 = perf_counter()
 
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rc
 import pandas as pd
 import pickle
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
+from os import path
 
-event_catalogue_file = f'/work/chuck/sarthak/argset/event_catalogues/event_catalogue_run00126_part.pkl'
+rc('figure', autolayout=True, figsize=[16, 9], dpi=125, titlesize=20 )
+rc('font', family='monospace')
+rc('axes', titlesize=20, titleweight='heavy', labelsize=16, labelweight='bold')
+rc(('xtick', 'ytick'), labelsize = 18)
+rc('legend', fontsize=14)
+
+## ----------------------------------------- loading data -----------------------------------------
+data_dir = '/work/chuck/sarthak/argset/event_catalogues'
+filename = 'event_catalogue_run00126.pkl'
+# filename = 'event_catalogue_run00126_part.pkl'
+event_catalogue_file = path.join(data_dir, filename)
 
 event_catalogue = pd.read_pickle(event_catalogue_file)
 
 wfs = event_catalogue['wf']
-
+del event_catalogue
 ## ----------------------------------------- function definitions -----------------------------------------
 def pulse_difference(event_x):
     # window_range = np.arange(350, 500)
@@ -23,10 +36,13 @@ def pulse_difference(event_x):
     peaks1 =find_peaks(wfs[event_x][1][window_range])
     peaks2 =find_peaks(wfs[event_x][2][window_range])
 
-    mp0 = np.argmax(wfs[event_x][0][window_range][peaks0[0]])
-    mp1 = np.argmax(wfs[event_x][1][window_range][peaks1[0]])
-    mp2 = np.argmax(wfs[event_x][2][window_range][peaks2[0]])
-
+    try:
+        mp0 = np.argmax(wfs[event_x][0][window_range][peaks0[0]])
+        mp1 = np.argmax(wfs[event_x][1][window_range][peaks1[0]])
+        mp2 = np.argmax(wfs[event_x][2][window_range][peaks2[0]])
+    except:
+        print(f'array: {event_x}')
+        print(f'array: {wfs[event_x][0]}')
     sample_mp0 = wfs[event_x][0][window_range][peaks0[0]][mp0]
     sample_mp1 = window_range[peaks1[0]][mp1]
     sample_mp2 = window_range[peaks2[0]][mp2]
@@ -81,7 +97,10 @@ pretrigger_sum = {
     1: [],
     2: []
 }
-wf_sum_ls = []
+wf_sum_dict = {0: [],
+            1: [],
+            2: []
+            } 
 com_dict = {0: [],
             1: [],
             2: []
@@ -92,7 +111,10 @@ for event_x in range(wfs.shape[0]):
     pretrigger_sum[1].append( np.sum(wfs[event_x][1][:350]) )
     pretrigger_sum[2].append( np.sum(wfs[event_x][2][:350]) )
     pretrigger_sum[0].append( np.sum(wfs[event_x][0][:350]) )
-    wf_sum_ls.append( np.sum(wfs[event_x], axis=1) )
+    wf_sum = np.sum(wfs[event_x], axis=1)
+    for ch_x in range(3):
+        wf_sum_dict[ch_x].append( wf_sum[ch_x] )
+        
     com_arr = calculate_com(event_x)
     com_dict[0].append(com_arr[0])
     com_dict[1].append(com_arr[1])
@@ -105,12 +127,22 @@ hist_features = {
     1: [],
     2: [],
 }
-
 com_mean_arr = np.zeros([3,])
 com_std_arr = np.zeros([3,])
 
-fig_1, ax_1 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = True)
+fig_0, ax_0 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = False)
+for ch_x in range(3):
+    ax_0[ch_x].hist(pretrigger_sum[ch_x], bins = np.arange(-6000, 200_000, 1000), 
+                            color=f'C{ch_x}', label = f'pretrigger sum in channel {ch_x}')
+    ax_0[ch_x].set_yscale('log')
+    ax_0[ch_x].legend()
+    ax_0[ch_x].grid()
+    plt.subplots_adjust(wspace=0.025, hspace=0.025)
+    fig_0.suptitle('hist of pretrigger sum')
+fig_0.savefig('hist_pretrigger_sum.pdf')
+plt.close(fig_0)
 
+fig_1, ax_1 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = True)
 for ch_x in range(3):
     hist_features[ch_x] = ( ax_1[ch_x].hist(com_dict[ch_x], bins=np.arange(-5_000, 5_000, 25), 
                             color=f'C{ch_x}', label = f'{ch_x}')
@@ -119,29 +151,21 @@ for ch_x in range(3):
     ax_1[ch_x].grid()
     plt.subplots_adjust(wspace=0.025, hspace=0.025)
     fig_1.suptitle('hist of Center Of Mass')
-
     com_mean_arr[ch_x], com_std_arr[ch_x] = fit_com_peak(ch_x)
-
 fig_1.savefig('hist_COM.pdf')
 plt.close(fig_1)
-
 del hist_features
 
-com_threshold = 300
-
+# com_threshold = 300 # not in use
 ch_id = 1
-com_below_xsigma = com_mean_arr - 2*com_std_arr
-com_above_xsigma = com_mean_arr + 2*com_std_arr
+com_below_xsigma = com_mean_arr - 1.75*com_std_arr # was 2
+com_above_xsigma = com_mean_arr + 1.75*com_std_arr
 
 wf_sum_post_cut_dict = {
     1: [],
     2: [],
     3: []
 }
-
-# wf_sum_post_1_cut_ls = []
-# wf_sum_post_2_cut_ls = []
-# wf_sum_post_3_cut_ls = []
 com_post_cut_dict = {0: [],
             1: [],
             2: []
@@ -150,46 +174,48 @@ event_list_post_cut = []
 wf_sum_post_cut_ls = []
 
 for event_x in range(wfs.shape[0]):
-    if pretrigger_sum[0][event_x] <= 4000: # 1st cut: pretrigger sum
-        wf_sum_post_cut_dict[1].append(wf_sum_ls[event_x][0]) # sum is always taken from channel 0; should we change it?
+    if pretrigger_sum[0][event_x] <= 4000: # 1st cut: pretrigger sum of Channel 0
+        wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
         if pulse_difference(event_x) <= 40: # 2nd cut: simultaneity of pulses
         # if True:
-            wf_sum_post_cut_dict[2].append(wf_sum_ls[event_x][0])
+            wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
             # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
             if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
-                wf_sum_post_cut_dict[3].append(wf_sum_ls[event_x][0])
-                event_list_post_cut.append(event_x)
+                wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
+                event_list_post_cut.append(event_x) # these events should be pickled for further processing
                 wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
                 com_post_cut_dict[0].append(com_dict[0][event_x])
                 com_post_cut_dict[1].append(com_dict[1][event_x])
                 com_post_cut_dict[2].append(com_dict[2][event_x])
 
-hist_plot_range = (0e6, 7.5e6)
+hist_plot_range = (0e6, 5e6)
 
-fig_2, ax_2 = plt.subplots( 4, 1, figsize=(10, 8), sharex=True, sharey = False)
-
-bin_content_1, bin_edges, _PlotsObjects = ax_2[0].hist(wf_sum_post_cut_dict[1], bins=500, range = hist_plot_range, label = '1st cut [Channel 0]')
-bin_content_2, bin_edges, _PlotsObjects  = ax_2[1].hist(wf_sum_post_cut_dict[2], bins=bin_edges, label = '2nd cut [Channel 0]')
-bin_content_3, bin_edges, _PlotsObjects  = ax_2[2].hist(wf_sum_post_cut_dict[3], bins=bin_edges, label = '3rd cut [Channel 0]')
-
+fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
+bin_content_0, bin_edges, _PlotsObjects = ax_2[0].hist(wf_sum_dict[0], bins=500, range = hist_plot_range, label = 'No cut [Channel 0]')
+bin_content_1, bin_edges, _PlotsObjects = ax_2[1].hist(wf_sum_post_cut_dict[1], bins=bin_edges, range = hist_plot_range, label = '1st cut [Channel 0]')
+bin_content_2, bin_edges, _PlotsObjects  = ax_2[2].hist(wf_sum_post_cut_dict[2], bins=bin_edges, label = '2nd cut [Channel 0]')
+bin_content_3, bin_edges, _PlotsObjects  = ax_2[3].hist(wf_sum_post_cut_dict[3], bins=bin_edges, label = '3rd cut [Channel 0]')
 plt.subplots_adjust(wspace=0.025, hspace=0.025)
 fig_2.suptitle('successive cuts')
-for subplot_x in range(3):
+eff_1_0 = np.divide(bin_content_1, bin_content_0, out=np.zeros_like(bin_content_1), where=bin_content_0!=0)
+ax_2[4].plot(bin_edges[:-1], 1.-eff_1_0, alpha=0.5, color='#f86f6c', label = 'cut_1/no_cuts')
+eff_2_1 = np.divide(bin_content_2, bin_content_1, out=np.zeros_like(bin_content_2), where=bin_content_1!=0)
+ax_2[4].plot(bin_edges[:-1], 1.-eff_2_1, alpha=0.5, color='#69ebd2', label = 'cut_2/cut_1')
+eff_3_2 = np.divide(bin_content_3, bin_content_2, out=np.zeros_like(bin_content_3), where=bin_content_2!=0)
+ax_2[4].plot(bin_edges[:-1], 1.-eff_3_2, alpha=0.5, color='#447acd', label = 'cut_3/cut_2')
+eff_3_0 = np.divide(bin_content_3, bin_content_0, out=np.zeros_like(bin_content_3), where=bin_content_0!=0)
+ax_2[4].plot(bin_edges[:-1], 1.-eff_3_0, alpha=0.5, color='#e59acf', label = 'overall')
+ax_2[4].axhline(y=0.2, linestyle='--')
+for subplot_x in range(4):
     ax_2[subplot_x].legend()
     ax_2[subplot_x].grid()
-eff_2_1 = np.divide(bin_content_2, bin_content_1, out=np.zeros_like(bin_content_2), where=bin_content_1!=0)
-ax_2[3].plot(bin_edges[:-1], eff_2_1, alpha=0.5, color='red', label = 'cut_2/cut_1')
-eff_3_2 = np.divide(bin_content_3, bin_content_2, out=np.zeros_like(bin_content_3), where=bin_content_2!=0)
-ax_2[3].plot(bin_edges[:-1], eff_3_2, alpha=0.5, color='magenta', label = 'cut_3/cut_2')
-
-ax_2[3].legend()
-ax_2[0].set_ylabel('counts')
-ax_2[1].set_ylabel('counts')
-ax_2[2].set_ylabel('counts')
-ax_2[3].set_ylabel('ratio')
-ax_2[3].set_xlabel('wf sum bin')
+    ax_2[subplot_x].set_ylabel('counts')
+ax_2[4].legend()
+ax_2[4].set_ylabel('cut efficiency')
+ax_2[4].set_xlabel('Full WF sum')
 fig_2.savefig('successive_cuts.pdf')
 plt.close(fig_2)
+del bin_content_1, bin_content_2, bin_content_3, bin_edges, _PlotsObjects
 
 fig_3, ax_3 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = True)
 for ch_id in range(3):
