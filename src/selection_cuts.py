@@ -6,6 +6,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
+import matplotlib
 import pandas as pd
 import pickle
 from scipy.signal import find_peaks
@@ -20,8 +21,8 @@ rc('legend', fontsize=14)
 
 ## ----------------------------------------- loading data -----------------------------------------
 data_dir = '/work/chuck/sarthak/argset/event_catalogues'
-filename = 'event_catalogue_run00126.pkl'
-# filename = 'event_catalogue_run00126_part.pkl'
+# filename = 'event_catalogue_run00126.pkl'
+filename = 'event_catalogue_run00126_part.pkl'
 event_catalogue_file = path.join(data_dir, filename)
 
 event_catalogue = pd.read_pickle(event_catalogue_file)
@@ -55,7 +56,7 @@ def red_chisq(f_obs, f_exp, fittedparameters):
     ndf = f_obs.shape[0]
     return chisqr/(ndf -fittedparameters.shape[0])
 
-def fit_com_peak(ch_x):
+def fit_com_peak(ch_x:int, ax_1:matplotlib.axes.Axes):
     
     def f_gauss(x, f_mean, f_sigma, f_k):
         return f_k*(1/(f_sigma*np.sqrt(2*np.pi)))*np.exp(-0.5*((x-f_mean)/f_sigma)**2)
@@ -84,6 +85,9 @@ def fit_com_peak(ch_x):
     print(f'fitted_parameters for {ch_x}: {fitted_parameters}')
     print('\n')
     return fitted_parameters[0], fitted_parameters[1]
+
+def hist_sum_filtered_WF():
+    return none
 ## ----------------------------------------- program -----------------------------------------
 ch_id = 0
 
@@ -124,7 +128,16 @@ hist_features = {
 }
 com_mean_arr = np.zeros([3,])
 com_std_arr = np.zeros([3,])
-
+# ## ----------------------------------------- diag -----------------------------------------
+# hist_plot_range = (-2.5e6, 0.5e7)
+# fig_2, ax_2 = plt.subplots( 1, 1, figsize=(10, 8), sharex=True, sharey = False)
+# bin_content_0, bin_edges, _PlotsObjects = ax_2.hist(wf_sum_dict[0], bins=10000, range=hist_plot_range, label = 'full wf sum')
+# np.save('wf_sum_0_content.npy', bin_content_0)
+# np.save('wf_sum_0_edges.npy', bin_edges)
+# fig_2.savefig('hist_full_wf_sum.pdf')
+# plt.close(fig_2)
+# sys.exit()
+# ## ----------------------------------------- diag -----------------------------------------
 fig_0, ax_0 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = False)
 for ch_x in range(3):
     ax_0[ch_x].hist(pretrigger_sum[ch_x], bins = np.arange(-6000, 200_000, 1000), 
@@ -146,7 +159,7 @@ for ch_x in range(3):
     ax_1[ch_x].grid()
     plt.subplots_adjust(wspace=0.025, hspace=0.025)
     fig_1.suptitle('hist of Center Of Mass')
-    com_mean_arr[ch_x], com_std_arr[ch_x] = fit_com_peak(ch_x)
+    com_mean_arr[ch_x], com_std_arr[ch_x] = fit_com_peak(ch_x, ax_1)
 fig_1.savefig('hist_COM.pdf')
 plt.close(fig_1)
 del hist_features
@@ -168,11 +181,13 @@ com_post_cut_dict = {0: [],
 event_list_post_cut = []
 wf_sum_post_cut_ls = []
 
+## cuts
 for event_x in range(wfs.shape[0]):
-    if pretrigger_sum[0][event_x] <= 4000: # 1st cut: pretrigger sum of Channel 0
-        wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
+    # if pretrigger_sum[0][event_x] <= 4000:
+    if (pretrigger_sum[0][event_x] <= 4000) and (pretrigger_sum[0][event_x] >= -6000): # 1st cut: pretrigger sum of Channel 0
+        # wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
         if pulse_difference(event_x) <= 40: # 2nd cut: simultaneity of pulses
-        # if True:
+        if True:
             wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
             # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
             if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
