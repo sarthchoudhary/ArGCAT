@@ -35,14 +35,9 @@ def pulse_difference(event_x):
     peaks0 =find_peaks(wfs[event_x][0][window_range])
     peaks1 =find_peaks(wfs[event_x][1][window_range])
     peaks2 =find_peaks(wfs[event_x][2][window_range])
-
-    try:
-        mp0 = np.argmax(wfs[event_x][0][window_range][peaks0[0]])
-        mp1 = np.argmax(wfs[event_x][1][window_range][peaks1[0]])
-        mp2 = np.argmax(wfs[event_x][2][window_range][peaks2[0]])
-    except:
-        print(f'array: {event_x}')
-        print(f'array: {wfs[event_x][0]}')
+    mp0 = np.argmax(wfs[event_x][0][window_range][peaks0[0]])
+    mp1 = np.argmax(wfs[event_x][1][window_range][peaks1[0]])
+    mp2 = np.argmax(wfs[event_x][2][window_range][peaks2[0]])
     sample_mp0 = wfs[event_x][0][window_range][peaks0[0]][mp0]
     sample_mp1 = window_range[peaks1[0]][mp1]
     sample_mp2 = window_range[peaks2[0]][mp2]
@@ -183,6 +178,7 @@ for event_x in range(wfs.shape[0]):
             if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
                 wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
                 event_list_post_cut.append(event_x) # these events should be pickled for further processing
+                np.save('list_pass_events.npy', np.array(event_list_post_cut)) # diag TODO: same for failed events
                 wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
                 com_post_cut_dict[0].append(com_dict[0][event_x])
                 com_post_cut_dict[1].append(com_dict[1][event_x])
