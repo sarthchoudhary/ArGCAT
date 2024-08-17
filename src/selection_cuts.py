@@ -59,7 +59,7 @@ def pulse_difference(event_x, use_flt_wf:bool):
     if use_flt_wf:
         # window_range = np.arange(350, 500)
         window_range = np.arange(350, 4000)
-        peaks0 =find_peaks(flt_dict[0][event_x][window_range]) # these lines are not necessary
+        peaks0 =find_peaks(flt_dict[0][event_x][window_range]) # TODO: better code
         peaks1 =find_peaks(flt_dict[1][event_x][window_range]) # same
         peaks2 =find_peaks(flt_dict[2][event_x][window_range]) # same
         mp0 = np.argmax(flt_dict[0][event_x][window_range][peaks0[0]])
@@ -177,8 +177,9 @@ mfilter = WFFilter(m.config)
 
 def perform_arma(og_wf):
     flt = np.reshape(mfilter.numba_fast_filter(og_wf), newshape=og_wf.shape)
-    mas = m.algos.running_mean(flt, gate=60)
-    return flt - mas
+    # mas = m.algos.running_mean(flt, gate=60)
+    # return flt - mas
+    return flt
 
 flt_wf_sum = {
     0: [],
@@ -193,10 +194,11 @@ for event_id in range(wfs.shape[0]):
     flt_wf_sum[0].append( flt_wf[0] )
 
 sum_hist_plot_range = (-2.5e6, 0.5e7)
-flt_hist_plot_range = (-100, 275)
+# flt_hist_plot_range = (-100, 275)
 fig_4, ax_4 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey = False)
 for ch_id in range(3):
-    ax_4[ch_id][1].hist(flt_wf_sum[ch_id], bins=100, range=flt_hist_plot_range, color=f'C{ch_id}', label = f'filtered wf sum {ch_id}')
+    # ax_4[ch_id][1].hist(flt_wf_sum[ch_id], bins=100, range=flt_hist_plot_range, color=f'C{ch_id}', label = f'filtered wf sum {ch_id}')
+    ax_4[ch_id][1].hist(flt_wf_sum[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'filtered wf sum {ch_id}')
     ax_4[ch_id][1].legend()
     ax_4[ch_id][1].grid()
     ax_4[ch_id][0].hist(wf_sum_dict[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'full wf sum {ch_id}')
@@ -208,7 +210,7 @@ plt.close(fig_4)
 
 flt_dict = create_flt_wfs(wfs)
 
-## ----------------------------------------- ARMA -----------------------------------------
+## ----------------------------------------- Histograms -----------------------------------------
 fig_0, ax_0 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = False)
 for ch_x in range(3):
     ax_0[ch_x].hist(pretrigger_sum[ch_x], bins = np.arange(-6000, 200_000, 1000), 
@@ -235,6 +237,7 @@ fig_1.savefig('hist_COM.pdf')
 plt.close(fig_1)
 del hist_features
 
+## ----------------------------------------- cuts -----------------------------------------
 # com_threshold = 300 # not in use
 ch_id = 1
 com_below_xsigma = com_mean_arr - 1.75*com_std_arr # was 2
@@ -252,7 +255,6 @@ com_post_cut_dict = {0: [],
 event_list_post_cut = []
 wf_sum_post_cut_ls = []
 
-## ----------------------------------------- cuts -----------------------------------------
 for event_x in range(wfs.shape[0]):
     # if pretrigger_sum[0][event_x] <= 4000:
     if (pretrigger_sum[0][event_x] <= 4000) or (pretrigger_sum[0][event_x] >= -6000): # 1st cut: pretrigger sum of Channel 0
