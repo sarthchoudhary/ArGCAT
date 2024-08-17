@@ -1,3 +1,5 @@
+## ----------------------------------------- computing resources -----------------------------------------
+### srun --mem=16G -A bejger-grp -p dgx --pty bash
 ## ----------------------------------------- setting-up libraries -----------------------------------------
 from time import perf_counter
 t0 = perf_counter()
@@ -30,18 +32,42 @@ event_catalogue = pd.read_pickle(event_catalogue_file)
 wfs = event_catalogue['wf']
 del event_catalogue
 ## ----------------------------------------- function definitions -----------------------------------------
-def pulse_difference(event_x):
-    # window_range = np.arange(350, 500)
-    window_range = np.arange(350, 4000)
-    peaks0 =find_peaks(wfs[event_x][0][window_range])
-    peaks1 =find_peaks(wfs[event_x][1][window_range])
-    peaks2 =find_peaks(wfs[event_x][2][window_range])
-    mp0 = np.argmax(wfs[event_x][0][window_range][peaks0[0]])
-    mp1 = np.argmax(wfs[event_x][1][window_range][peaks1[0]])
-    mp2 = np.argmax(wfs[event_x][2][window_range][peaks2[0]])
-    sample_mp0 = wfs[event_x][0][window_range][peaks0[0]][mp0]
-    sample_mp1 = window_range[peaks1[0]][mp1]
-    sample_mp2 = window_range[peaks2[0]][mp2]
+def create_flt_wfs(wfs):
+    flt_dict = {0: [], 
+                1: [],
+                2: []}
+    for og_wf in wfs:
+        flt_wf = perform_arma(og_wf)
+        for ch_id in range(3):
+            flt_dict[ch_id].append(flt_wf[ch_id])
+    return flt_dict
+
+def pulse_difference(event_x, use_flt_wf:bool):
+    if not use_flt_wf:
+        # window_range = np.arange(350, 500)
+        window_range = np.arange(350, 4000)
+        peaks0 =find_peaks(wfs[event_x][0][window_range])
+        peaks1 =find_peaks(wfs[event_x][1][window_range])
+        peaks2 =find_peaks(wfs[event_x][2][window_range])
+        mp0 = np.argmax(wfs[event_x][0][window_range][peaks0[0]])
+        mp1 = np.argmax(wfs[event_x][1][window_range][peaks1[0]])
+        mp2 = np.argmax(wfs[event_x][2][window_range][peaks2[0]])
+        sample_mp0 = wfs[event_x][0][window_range][peaks0[0]][mp0]
+        sample_mp1 = window_range[peaks1[0]][mp1]
+        sample_mp2 = window_range[peaks2[0]][mp2]
+
+    if use_flt_wf:
+        # window_range = np.arange(350, 500)
+        window_range = np.arange(350, 4000)
+        peaks0 =find_peaks(flt_dict[0][event_x][window_range]) # these lines are not necessary
+        peaks1 =find_peaks(flt_dict[1][event_x][window_range]) # same
+        peaks2 =find_peaks(flt_dict[2][event_x][window_range]) # same
+        mp0 = np.argmax(flt_dict[0][event_x][window_range][peaks0[0]])
+        mp1 = np.argmax(flt_dict[1][event_x][window_range][peaks1[0]])
+        mp2 = np.argmax(flt_dict[2][event_x][window_range][peaks2[0]])
+        sample_mp0 = flt_dict[0][event_x][window_range][peaks0[0]][mp0]
+        sample_mp1 = window_range[peaks1[0]][mp1]
+        sample_mp2 = window_range[peaks2[0]][mp2]
 
     return abs(sample_mp1 - sample_mp2)
 
@@ -87,8 +113,17 @@ def fit_com_peak(ch_x:int, ax_1:matplotlib.axes.Axes):
     return fitted_parameters[0], fitted_parameters[1]
 
 def hist_sum_filtered_WF():
-    return none
+    hist_plot_range = (-2.5e6, 0.5e7)
+    fig_2, ax_2 = plt.subplots( 1, 1, figsize=(10, 8), sharex=True, sharey = False)
+    bin_content_0, bin_edges, _PlotsObjects = ax_2.hist(wf_sum_dict[0], bins=10000, range=hist_plot_range, label = 'full wf sum')
+    np.save('wf_sum_0_content.npy', bin_content_0)
+    np.save('wf_sum_0_edges.npy', bin_edges)
+    fig_2.savefig('hist_full_wf_sum.pdf')
+    plt.close(fig_2)
+    # sys.exit()
+
 ## ----------------------------------------- program -----------------------------------------
+
 ch_id = 0
 
 pretrigger_sum = {
@@ -128,16 +163,52 @@ hist_features = {
 }
 com_mean_arr = np.zeros([3,])
 com_std_arr = np.zeros([3,])
-# ## ----------------------------------------- diag -----------------------------------------
-# hist_plot_range = (-2.5e6, 0.5e7)
-# fig_2, ax_2 = plt.subplots( 1, 1, figsize=(10, 8), sharex=True, sharey = False)
-# bin_content_0, bin_edges, _PlotsObjects = ax_2.hist(wf_sum_dict[0], bins=10000, range=hist_plot_range, label = 'full wf sum')
-# np.save('wf_sum_0_content.npy', bin_content_0)
-# np.save('wf_sum_0_edges.npy', bin_edges)
-# fig_2.savefig('hist_full_wf_sum.pdf')
-# plt.close(fig_2)
+
+## ----------------------------------------- ARMA -----------------------------------------
+from pyreco.manager.manager import Manager
+filename = '/work/sarthak/argset/data/run00126.mid.lz4'
+outfile = 'tempJupyR00126_from_script'
+confile = 'argset.ini'
+tmin,tmax = 0, 4000
+cmdline_args = f'--config {confile} -o {outfile} -i {filename}'
+m = Manager( midas=True, cmdline_args=cmdline_args)
+from pyreco.reco.filtering import WFFilter
+mfilter = WFFilter(m.config)
+
+def perform_arma(og_wf):
+    flt = np.reshape(mfilter.numba_fast_filter(og_wf), newshape=og_wf.shape)
+    mas = m.algos.running_mean(flt, gate=60)
+    return flt - mas
+
+flt_wf_sum = {
+    0: [],
+    1: [],
+    2: []
+}
+
+for event_id in range(wfs.shape[0]):
+    flt_wf = np.sum(perform_arma(wfs[event_id]), axis=1)
+    flt_wf_sum[1].append( flt_wf[1] )
+    flt_wf_sum[2].append( flt_wf[2] )
+    flt_wf_sum[0].append( flt_wf[0] )
+
+sum_hist_plot_range = (-2.5e6, 0.5e7)
+flt_hist_plot_range = (-100, 275)
+fig_4, ax_4 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey = False)
+for ch_id in range(3):
+    ax_4[ch_id][1].hist(flt_wf_sum[ch_id], bins=100, range=flt_hist_plot_range, color=f'C{ch_id}', label = f'filtered wf sum {ch_id}')
+    ax_4[ch_id][1].legend()
+    ax_4[ch_id][1].grid()
+    ax_4[ch_id][0].hist(wf_sum_dict[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'full wf sum {ch_id}')
+    ax_4[ch_id][0].legend()
+    ax_4[ch_id][0].grid()
+fig_4.savefig('hist_flt_wf.pdf')
+plt.close(fig_4)
 # sys.exit()
-# ## ----------------------------------------- diag -----------------------------------------
+
+flt_dict = create_flt_wfs(wfs)
+
+## ----------------------------------------- ARMA -----------------------------------------
 fig_0, ax_0 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = False)
 for ch_x in range(3):
     ax_0[ch_x].hist(pretrigger_sum[ch_x], bins = np.arange(-6000, 200_000, 1000), 
@@ -181,13 +252,13 @@ com_post_cut_dict = {0: [],
 event_list_post_cut = []
 wf_sum_post_cut_ls = []
 
-## cuts
+## ----------------------------------------- cuts -----------------------------------------
 for event_x in range(wfs.shape[0]):
     # if pretrigger_sum[0][event_x] <= 4000:
-    if (pretrigger_sum[0][event_x] <= 4000) and (pretrigger_sum[0][event_x] >= -6000): # 1st cut: pretrigger sum of Channel 0
-        # wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
-        if pulse_difference(event_x) <= 40: # 2nd cut: simultaneity of pulses
-        if True:
+    if (pretrigger_sum[0][event_x] <= 4000) or (pretrigger_sum[0][event_x] >= -6000): # 1st cut: pretrigger sum of Channel 0
+        wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
+        if pulse_difference(event_x, use_flt_wf=True) <= 40: # 2nd cut: simultaneity of pulses
+        # if True:
             wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
             # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
             if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
