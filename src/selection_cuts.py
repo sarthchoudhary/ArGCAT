@@ -82,7 +82,7 @@ def red_chisq(f_obs, f_exp, fittedparameters):
     ndf = f_obs.shape[0]
     return chisqr/(ndf -fittedparameters.shape[0])
 
-def fit_com_peak(ch_x:int, ax_1:matplotlib.axes.Axes):
+def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
     
     def f_gauss(x, f_mean, f_sigma, f_k):
         return f_k*(1/(f_sigma*np.sqrt(2*np.pi)))*np.exp(-0.5*((x-f_mean)/f_sigma)**2)
@@ -153,16 +153,7 @@ for event_x in range(wfs.shape[0]):
     com_dict[0].append(com_arr[0])
     com_dict[1].append(com_arr[1])
     com_dict[2].append(com_arr[2])
-
 del com_arr
-
-hist_features = {
-    0: [],
-    1: [],
-    2: [],
-}
-com_mean_arr = np.zeros([3,])
-com_std_arr = np.zeros([3,])
 
 ## ----------------------------------------- ARMA -----------------------------------------
 from pyreco.manager.manager import Manager
@@ -223,6 +214,14 @@ for ch_x in range(3):
 fig_0.savefig('hist_pretrigger_sum.pdf')
 plt.close(fig_0)
 
+hist_features = {
+    0: [],
+    1: [],
+    2: [],
+}
+com_mean_arr = np.zeros([3,])
+com_std_arr = np.zeros([3,])
+
 fig_1, ax_1 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = True)
 for ch_x in range(3):
     hist_features[ch_x] = ( ax_1[ch_x].hist(com_dict[ch_x], bins=np.arange(-5_000, 5_000, 25), 
@@ -232,7 +231,8 @@ for ch_x in range(3):
     ax_1[ch_x].grid()
     plt.subplots_adjust(wspace=0.025, hspace=0.025)
     fig_1.suptitle('hist of Center Of Mass')
-    com_mean_arr[ch_x], com_std_arr[ch_x] = fit_com_peak(ch_x, ax_1)
+    com_mean_arr[ch_x], com_std_arr[ch_x] = fit_com_peak(ch_x, ax_1, hist_features
+)
 fig_1.savefig('hist_COM.pdf')
 plt.close(fig_1)
 del hist_features
@@ -256,24 +256,24 @@ event_list_post_cut = []
 wf_sum_post_cut_ls = []
 
 for event_x in range(wfs.shape[0]):
-    # if pretrigger_sum[0][event_x] <= 4000:
-    if (pretrigger_sum[0][event_x] <= 4000) or (pretrigger_sum[0][event_x] >= -6000): # 1st cut: pretrigger sum of Channel 0
-        wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
-        if pulse_difference(event_x, use_flt_wf=True) <= 40: # 2nd cut: simultaneity of pulses
-        # if True:
-            wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
-            # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
-            if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
-                wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
-                event_list_post_cut.append(event_x) # these events should be pickled for further processing
-                np.save('list_pass_events.npy', np.array(event_list_post_cut)) # diag TODO: same for failed events
-                wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
-                com_post_cut_dict[0].append(com_dict[0][event_x])
-                com_post_cut_dict[1].append(com_dict[1][event_x])
-                com_post_cut_dict[2].append(com_dict[2][event_x])
+    if pretrigger_sum[0][event_x] <= 4000:
+        if pretrigger_sum[0][event_x] >= -6000:
+    # if -6000 <= pretrigger_sum[0][event_x] <= 4000: # 1st cut: pretrigger sum of Channel 0
+            wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
+            if pulse_difference(event_x, use_flt_wf=True) <= 40: # 2nd cut: simultaneity of pulses
+            # if True:
+                wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
+                # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
+                if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
+                    wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
+                    event_list_post_cut.append(event_x) # these events should be pickled for further processing
+                    np.save('list_pass_events.npy', np.array(event_list_post_cut)) # diag TODO: same for failed events
+                    wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
+                    com_post_cut_dict[0].append(com_dict[0][event_x])
+                    com_post_cut_dict[1].append(com_dict[1][event_x])
+                    com_post_cut_dict[2].append(com_dict[2][event_x])
 
 hist_plot_range = (0e6, 5e6)
-
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
 bin_content_0, bin_edges, _PlotsObjects = ax_2[0].hist(wf_sum_dict[0], bins=500, range = hist_plot_range, label = 'No cut [Channel 0]')
 bin_content_1, bin_edges, _PlotsObjects = ax_2[1].hist(wf_sum_post_cut_dict[1], bins=bin_edges, range = hist_plot_range, label = '1st cut [Channel 0]')
