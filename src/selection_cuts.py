@@ -251,8 +251,9 @@ com_post_cut_dict = {0: [],
             1: [],
             2: []
             }
-event_list_post_cut = []
-wf_sum_post_cut_ls = []
+event_PassList= []
+event_FailList_3rdCut= []
+# wf_sum_post_cut_ls = []
 
 for event_x in range(wfs.shape[0]):
     if pretrigger_sum[0][event_x] <= 4000 and pretrigger_sum[0][event_x] >= -6000:
@@ -263,12 +264,15 @@ for event_x in range(wfs.shape[0]):
             wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
             if pulse_difference(event_x, use_flt_wf=True) <= 40: # 2nd cut: simultaneity of pulses
                 wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
-                event_list_post_cut.append(event_x) # these events should be pickled or passed for further processing
-                # np.save('list_pass_events.npy', np.array(event_list_post_cut)) # diag TODO: same for failed events
-                wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
+                event_PassList.append(event_x) # these events should be pickled or passed for further processing
+                # wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
                 com_post_cut_dict[0].append(com_dict[0][event_x])
                 com_post_cut_dict[1].append(com_dict[1][event_x])
                 com_post_cut_dict[2].append(com_dict[2][event_x])
+            else:
+                event_FailList_3rdCut.append(event_x)
+np.save(path.join(output_dir, 'event_PassList.npy'), np.array(event_PassList))
+np.save(path.join(output_dir, 'event_FailList_3rdCut.npy'), np.array(event_FailList_3rdCut))
 
 hist_plot_range = (0e6, 5e6)
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
