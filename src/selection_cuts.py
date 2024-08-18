@@ -255,21 +255,20 @@ event_list_post_cut = []
 wf_sum_post_cut_ls = []
 
 for event_x in range(wfs.shape[0]):
-    if pretrigger_sum[0][event_x] <= 4000: # 1000 causes overall to cross 20%
-        if pretrigger_sum[0][event_x] >= -6000: # 1st cut: pretrigger sum of Channel 0
-            wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
-            if pulse_difference(event_x, use_flt_wf=True) <= 40: # 2nd cut: simultaneity of pulses
-            # if True:
-                wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
-                # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
-                if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
-                    wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
-                    event_list_post_cut.append(event_x) # these events should be pickled or passed for further processing
-                    # np.save('list_pass_events.npy', np.array(event_list_post_cut)) # diag TODO: same for failed events
-                    wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
-                    com_post_cut_dict[0].append(com_dict[0][event_x])
-                    com_post_cut_dict[1].append(com_dict[1][event_x])
-                    com_post_cut_dict[2].append(com_dict[2][event_x])
+    if pretrigger_sum[0][event_x] <= 4000 and pretrigger_sum[0][event_x] >= -6000:
+        wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
+        if pulse_difference(event_x, use_flt_wf=True) <= 40: # 2nd cut: simultaneity of pulses
+        # if True:
+            wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
+            # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
+            if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
+                wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
+                event_list_post_cut.append(event_x) # these events should be pickled or passed for further processing
+                # np.save('list_pass_events.npy', np.array(event_list_post_cut)) # diag TODO: same for failed events
+                wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
+                com_post_cut_dict[0].append(com_dict[0][event_x])
+                com_post_cut_dict[1].append(com_dict[1][event_x])
+                com_post_cut_dict[2].append(com_dict[2][event_x])
 
 hist_plot_range = (0e6, 5e6)
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
