@@ -14,6 +14,7 @@ import pickle
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 from os import path
+import os
 
 rc('figure', autolayout=True, figsize=[16, 9], dpi=125, titlesize=20 )
 rc('font', family='monospace')
@@ -24,12 +25,15 @@ rc('legend', fontsize=14)
 ## ----------------------------------------- loading data -----------------------------------------
 output_dir = '/home/sarthak/my_projects/argset/output'
 data_dir = '/work/chuck/sarthak/argset/event_catalogues'
+
 # filename = 'event_catalogue_run00126.pkl'
 filename = 'event_catalogue_run00126_part.pkl'
+file_basename = filename.split(sep='_run')[-1].split(sep='.')[0]
+output_subdir = path.join(output_dir, f'{file_basename}_output')
+if not path.isdir(output_subdir):
+        os.mkdir(output_subdir)
 event_catalogue_file = path.join(data_dir, filename)
-
 event_catalogue = pd.read_pickle(event_catalogue_file)
-
 wfs = event_catalogue['wf']
 del event_catalogue
 ## ----------------------------------------- function definitions -----------------------------------------
@@ -117,9 +121,9 @@ def histogram_filtered_wf_sum():
     hist_plot_range = (-2.5e6, 0.5e7)
     fig_2, ax_2 = plt.subplots( 1, 1, figsize=(10, 8), sharex=True, sharey = False)
     bin_content_0, bin_edges, _PlotsObjects = ax_2.hist(wf_sum_dict[0], bins=10000, range=hist_plot_range, label = 'full wf sum')
-    np.save('wf_sum_0_content.npy', bin_content_0)
-    np.save('wf_sum_0_edges.npy', bin_edges)
-    fig_2.savefig('hist_full_wf_sum.pdf')
+    np.save(path.join(output_subdir, 'wf_sum_0_content.npy'), bin_content_0)
+    np.save(path.join(output_subdir, 'wf_sum_0_edges.npy'), bin_edges)
+    fig_2.savefig(path.join(output_subdir, 'hist_full_wf_sum.pdf'))
     plt.close(fig_2)
 
 ## ----------------------------------------- program -----------------------------------------
@@ -157,7 +161,7 @@ del com_arr
 ## ----------------------------------------- ARMA -----------------------------------------
 from pyreco.manager.manager import Manager # TODO: move this inside perform_arma
 filename = '/work/sarthak/argset/data/run00126.mid.lz4'
-outfile = 'tempJupyR00126_from_script'
+outfile = path.join(output_subdir, 'tempJupyR00126_from_script')
 confile = 'argset.ini'
 tmin,tmax = 0, 4000
 cmdline_args = f'--config {confile} -o {outfile} -i {filename}'
@@ -194,7 +198,7 @@ def histogram_wf_sum():
         ax_4[ch_id][0].hist(wf_sum_dict[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'full wf sum {ch_id}')
         ax_4[ch_id][0].legend()
         ax_4[ch_id][0].grid()
-    fig_4.savefig('hist_flt_wf.pdf')
+    fig_4.savefig(path.join(output_subdir, 'hist_flt_wf.pdf'))
     plt.close(fig_4)
 
 # histogram_wf_sum() # not in use
@@ -211,7 +215,7 @@ for ch_x in range(3):
     ax_0[ch_x].grid()
     plt.subplots_adjust(wspace=0.025, hspace=0.025)
     fig_0.suptitle('hist of pretrigger sum')
-fig_0.savefig('hist_pretrigger_sum.pdf')
+fig_0.savefig(path.join(output_subdir, 'hist_pretrigger_sum.pdf'))
 plt.close(fig_0)
 
 hist_features = {
@@ -232,7 +236,7 @@ for ch_x in range(3):
     plt.subplots_adjust(wspace=0.025, hspace=0.025)
     fig_1.suptitle('hist of Center Of Mass')
     com_mean_arr[ch_x], com_std_arr[ch_x] = fit_com_peak(ch_x, ax_1, hist_features)
-fig_1.savefig('hist_COM.pdf')
+fig_1.savefig(path.join(output_subdir, 'hist_COM.pdf'))
 plt.close(fig_1)
 del hist_features
 
@@ -271,8 +275,8 @@ for event_x in range(wfs.shape[0]):
                 com_post_cut_dict[2].append(com_dict[2][event_x])
             else:
                 event_FailList_3rdCut.append(event_x)
-np.save(path.join(output_dir, 'event_PassList.npy'), np.array(event_PassList))
-np.save(path.join(output_dir, 'event_FailList_3rdCut.npy'), np.array(event_FailList_3rdCut))
+np.save(path.join(output_subdir, 'event_PassList.npy'), np.array(event_PassList))
+np.save(path.join(output_subdir, 'event_FailList_3rdCut.npy'), np.array(event_FailList_3rdCut))
 
 hist_plot_range = (0e6, 5e6)
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
@@ -298,7 +302,7 @@ for subplot_x in range(4):
 ax_2[4].legend()
 ax_2[4].set_ylabel('cut efficiency')
 ax_2[4].set_xlabel('Full WF sum')
-fig_2.savefig('successive_cuts.pdf')
+fig_2.savefig(path.join(output_subdir, 'successive_cuts.pdf'))
 plt.close(fig_2)
 del bin_content_1, bin_content_2, bin_content_3, bin_edges, _PlotsObjects
 
@@ -310,7 +314,7 @@ for ch_id in range(3):
     ax_3[ch_id].grid()
 plt.subplots_adjust(wspace=0.025, hspace=0.025)
 fig_3.suptitle('hist of Center Of Mass post cuts')
-fig_3.savefig('hist_COM_post_cut.pdf')
+fig_3.savefig(path.join(output_subdir, 'hist_COM_post_cut.pdf'))
 plt.close(fig_3)
 
 print(f'Execution time: {perf_counter() - t0}')
