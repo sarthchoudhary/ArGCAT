@@ -126,6 +126,27 @@ def histogram_filtered_wf_sum():
     fig_2.savefig(path.join(output_subdir, 'hist_full_wf_sum.pdf'))
     plt.close(fig_2)
 
+def apply_cuts(wfs, pulse_difference_threshold):
+    for event_x in range(wfs.shape[0]):
+        if pretrigger_sum[0][event_x] <= 4000 and pretrigger_sum[0][event_x] >= -6000:
+            wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
+            # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
+            if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
+            # if True:
+                wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
+                if pulse_difference(event_x, use_flt_wf=True) <= pulse_difference_threshold: # 2nd cut: simultaneity of pulses
+                    wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
+                    event_PassList.append(event_x) # these events should be pickled or passed for further processing
+                    # wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
+                    com_post_cut_dict[0].append(com_dict[0][event_x])
+                    com_post_cut_dict[1].append(com_dict[1][event_x])
+                    com_post_cut_dict[2].append(com_dict[2][event_x])
+                else:
+                    event_FailList_3rdCut.append(event_x)
+    np.save(path.join(output_subdir, 'event_PassList.npy'), np.array(event_PassList))
+    np.save(path.join(output_subdir, 'event_FailList_3rdCut.npy'), np.array(event_FailList_3rdCut))
+    # return com_post_cut_dict
+
 ## ----------------------------------------- program -----------------------------------------
 
 ch_id = 0
@@ -259,24 +280,7 @@ event_PassList= []
 event_FailList_3rdCut= []
 # wf_sum_post_cut_ls = []
 
-for event_x in range(wfs.shape[0]):
-    if pretrigger_sum[0][event_x] <= 4000 and pretrigger_sum[0][event_x] >= -6000:
-        wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
-        # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
-        if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
-        # if True:
-            wf_sum_post_cut_dict[2].append(wf_sum_dict[0][event_x])
-            if pulse_difference(event_x, use_flt_wf=True) <= 40: # 2nd cut: simultaneity of pulses
-                wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
-                event_PassList.append(event_x) # these events should be pickled or passed for further processing
-                # wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
-                com_post_cut_dict[0].append(com_dict[0][event_x])
-                com_post_cut_dict[1].append(com_dict[1][event_x])
-                com_post_cut_dict[2].append(com_dict[2][event_x])
-            else:
-                event_FailList_3rdCut.append(event_x)
-np.save(path.join(output_subdir, 'event_PassList.npy'), np.array(event_PassList))
-np.save(path.join(output_subdir, 'event_FailList_3rdCut.npy'), np.array(event_FailList_3rdCut))
+apply_cuts(wfs, pulse_difference_threshold=40)
 
 hist_plot_range = (0e6, 5e6)
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
