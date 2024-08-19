@@ -156,6 +156,19 @@ def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0,
     np.save(path.join(output_subdir, 'event_FailList_3rdCut.npy'), np.array(event_FailList_3rdCut))
     # return com_post_cut_dict
 
+def hist_pulse_difference():
+    pulse_difference_ls = []
+    for event_id in range(wfs.shape[0]):
+        pulse_difference_ls.append( pulse_difference(event_id, use_flt_wf=True) )
+    fig, ax = plt.subplots(1, figsize = (10, 8))
+    fig.suptitle('Histogram of Pulse maxima difference in channel 1 and 2')
+    ax.hist(pulse_difference_ls, bins=np.arange(0, 2500, 5),
+                color=f'C0', label='channels 1 & 2');
+    ax.axvline(x = 40, linestyle='--', color='red')
+    ax.set_yscale('log')
+    ax.set_xlabel('pulse maxima difference in bin units')
+    save_plot(fig, 'hist_pulse_difference')
+
 ## ----------------------------------------- program -----------------------------------------
 
 ch_id = 0
@@ -236,6 +249,9 @@ def histogram_wf_sum():
 flt_dict = create_flt_wfs(wfs) # pass it to pulse_difference
 
 ## ----------------------------------------- Histograms -----------------------------------------
+
+hist_pulse_difference()
+
 fig_0, ax_0 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = False)
 for ch_x in range(3):
     ax_0[ch_x].hist(pretrigger_sum[ch_x], bins = np.arange(-6000, 200_000, 1000), 
