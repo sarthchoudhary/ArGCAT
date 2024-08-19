@@ -124,11 +124,17 @@ def histogram_filtered_wf_sum():
     np.save(path.join(output_subdir, 'wf_sum_0_content.npy'), bin_content_0)
     np.save(path.join(output_subdir, 'wf_sum_0_edges.npy'), bin_edges)
     fig_2.savefig(path.join(output_subdir, 'hist_full_wf_sum.pdf'))
+    pickle.dump(fig_2, open(path.join(output_subdir, 'hist_full_wf_sum.pdf'),  'wb') )
     plt.close(fig_2)
 
-def apply_cuts(wfs, pulse_difference_threshold):
+def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0, 
+               pulse_difference_threshold=40):
+    # com_threshold = 300 # not in use
+    ch_id = 1
+    com_below_xsigma = com_mean_arr - sigma_multiplier*com_std_arr # was 2 # explore and investigate thresholds
+    com_above_xsigma = com_mean_arr + sigma_multiplier*com_std_arr
     for event_x in range(wfs.shape[0]):
-        if pretrigger_sum[0][event_x] <= 4000 and pretrigger_sum[0][event_x] >= -6000:
+        if pretrigger_sum[0][event_x] <= pretrigger_sum_UpperThreshold and pretrigger_sum[0][event_x] >= -6000:
             wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
             # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
             if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
@@ -220,6 +226,7 @@ def histogram_wf_sum():
         ax_4[ch_id][0].legend()
         ax_4[ch_id][0].grid()
     fig_4.savefig(path.join(output_subdir, 'hist_flt_wf.pdf'))
+    pickle.dump(fig_4, open(path.join(output_subdir, 'hist_flt_wf.pkl'),  'wb') )
     plt.close(fig_4)
 
 # histogram_wf_sum() # not in use
@@ -237,6 +244,7 @@ for ch_x in range(3):
     plt.subplots_adjust(wspace=0.025, hspace=0.025)
     fig_0.suptitle('hist of pretrigger sum')
 fig_0.savefig(path.join(output_subdir, 'hist_pretrigger_sum.pdf'))
+pickle.dump(fig_0, open(path.join(output_subdir, 'hist_pretrigger_sum.pkl'),  'wb') )
 plt.close(fig_0)
 
 hist_features = {
@@ -258,6 +266,7 @@ for ch_x in range(3):
     fig_1.suptitle('hist of Center Of Mass')
     com_mean_arr[ch_x], com_std_arr[ch_x] = fit_com_peak(ch_x, ax_1, hist_features)
 fig_1.savefig(path.join(output_subdir, 'hist_COM.pdf'))
+pickle.dump(fig_1, open(path.join(output_subdir, 'hist_COM.pkl'),  'wb') )
 plt.close(fig_1)
 del hist_features
 
@@ -307,6 +316,7 @@ ax_2[4].legend()
 ax_2[4].set_ylabel('cut efficiency')
 ax_2[4].set_xlabel('Full WF sum')
 fig_2.savefig(path.join(output_subdir, 'successive_cuts.pdf'))
+pickle.dump(fig_2, open(path.join(output_subdir, 'successive_cuts.pkl'),  'wb') )
 plt.close(fig_2)
 del bin_content_1, bin_content_2, bin_content_3, bin_edges, _PlotsObjects
 
@@ -319,6 +329,7 @@ for ch_id in range(3):
 plt.subplots_adjust(wspace=0.025, hspace=0.025)
 fig_3.suptitle('hist of Center Of Mass post cuts')
 fig_3.savefig(path.join(output_subdir, 'hist_COM_post_cut.pdf'))
+pickle.dump(fig_3, open(path.join(output_subdir, 'hist_COM_post_cut.pkl'),  'wb') )
 plt.close(fig_3)
 
 print(f'Execution time: {perf_counter() - t0}')
