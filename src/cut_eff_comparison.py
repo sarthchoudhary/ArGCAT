@@ -278,7 +278,7 @@ ax_5[0].legend()
 ax_5[0].grid()
 ax_5[0].set_ylabel('counts')
 
-pulse_difference_threshold_ls = [5, 10, 20, 40, 100, 150, 200, 500, 1000, 1500, 10_000]
+pulse_difference_threshold_ls = [20, 40, 100, 150] # [5, 10, 20, 40, 100, 150, 200, 500, 1000, 1500, 10_000]
 sigma_multiplier_ls = [0.25, 0.75, 1.0, 1.5, 1.75, 2.0, 3.0, 4.0]
 pretrigger_sum_UpperThreshold_ls = [2500, 3000, 4000, 4500, 5000, 6000] #500, 1000, 1500, 1750, 2000, 
 for pulse_difference_threshold in pulse_difference_threshold_ls:
