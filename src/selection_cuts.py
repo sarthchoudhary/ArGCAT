@@ -41,6 +41,10 @@ def save_plot(fig:matplotlib.figure.Figure, file_name: str):
     fig.savefig(path.join(output_subdir, f'{file_name}.pdf'))
     pickle.dump(fig, open(path.join(output_subdir, f'{file_name}.pkl'),  'wb') )
 
+def pickle_dict(dict: dict, filename:str):
+    with open(path.join(output_subdir, f'{filename}.pkl'), 'wb') as file_handle:
+        pickle.dump(dict, file_handle, pickle.HIGHEST_PROTOCOL)
+
 def create_flt_wfs(wfs):
     flt_dict = {0: [], 
                 1: [],
@@ -169,8 +173,33 @@ def hist_pulse_difference():
     ax.set_xlabel('pulse maxima difference in bin units')
     save_plot(fig, 'hist_pulse_difference')
 
-## ----------------------------------------- program -----------------------------------------
+def stack_flt_wf(flt_dict:dict):
+    stacked_flt_wf_dict= {
+    0:np.zeros_like(wfs[0][0]),
+    1:np.zeros_like(wfs[0][0]),
+    2:np.zeros_like(wfs[0][0]),
+    }
+    # stacked_flt_wf_dict[ch_id] = np.sum(np.array(flt_dict[ch_id]), axis=0)
+    for ch_id in range(3):
+        for event_id in event_PassList: #TODO: loop can be skipped using pandas.Series
+            stacked_flt_wf_dict[ch_id] += flt_dict[ch_id][event_id]
+    pickle_dict(stacked_flt_wf_dict, 'stacked_flt_wf_dict')
 
+    return stacked_flt_wf_dict
+
+def stack_wf(wfs:pd.core.series.Series):
+    stacked_wf_dict = {
+    0:np.zeros_like(wfs[0][0]),
+    1:np.zeros_like(wfs[0][0]),
+    2:np.zeros_like(wfs[0][0])
+    }
+    for ch_id in range(3):
+        for event_id in range(wfs.shape[0]):
+            stacked_wf_dict[ch_id] += wfs[event_id][ch_id]
+    pickle_dict(stacked_wf_dict, 'stacked_wf_dict')
+# def fit_stackedwf():
+
+## ----------------------------------------- program -----------------------------------------
 ch_id = 0
 
 pretrigger_sum = {
@@ -346,4 +375,6 @@ fig_3.suptitle('hist of Center Of Mass post cuts')
 save_plot(fig_3, 'hist_COM_post_cut')
 plt.close(fig_3)
 
+stack_flt_wf(flt_dict) # temp
+stack_wf(wfs) # temp
 print(f'Execution time: {perf_counter() - t0}')
