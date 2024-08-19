@@ -126,7 +126,7 @@ def histogram_filtered_wf_sum():
     fig_2.savefig(path.join(output_subdir, 'hist_full_wf_sum.pdf'))
     plt.close(fig_2)
 
-def apply_cuts(wfs, pretrigger_sum_UpperThreshold, sigma_multiplier=2.0, 
+def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0, 
                pulse_difference_threshold=40):
     # com_threshold = 300 # not in use
     ch_id = 1
@@ -272,17 +272,19 @@ del hist_features
 hist_plot_range = (0e6, 5e6)
 
 fig_5, ax_5 = plt.subplots( 2, 1, figsize=(19, 15))
-fig_5.suptitle('Efficiency comparison of Pulse difference cut for different thresholds')
+fig_5.suptitle('Efficiency comparison for different parameters')
 ax_5[0].hist(wf_sum_dict[0], bins=500, range = hist_plot_range, color=f'C{0}', label = 'No cut [Channel 0]')
 ax_5[0].legend()
 ax_5[0].grid()
 ax_5[0].set_ylabel('counts')
 
-# pulse_difference_threshold_ls = [5, 10, 20, 40, 100, 150, 200, 500, 1000, 1500, 10_000]
-# for pulse_difference_threshold in pulse_difference_threshold_ls:
-# sigma_multiplier_ls = [0.25, 0.75, 1.0, 1.5, 1.75, 2.0, 3.0, 4.0]
+pulse_difference_threshold_ls = [5, 10, 20, 40, 100, 150, 200, 500, 1000, 1500, 10_000]
+sigma_multiplier_ls = [0.25, 0.75, 1.0, 1.5, 1.75, 2.0, 3.0, 4.0]
 pretrigger_sum_UpperThreshold_ls = [500, 1000, 1500, 1750, 2000, 2500, 3000, 4000, 4500, 5000, 6000]
+# for pulse_difference_threshold in pulse_difference_threshold_ls:
+# for sigma_multiplier in sigma_multiplier_ls:
 for pretrigger_sum_UpperThreshold in pretrigger_sum_UpperThreshold_ls:
+ 
     com_post_cut_dict = {0: [],
                 1: [],
                 2: []
@@ -295,6 +297,8 @@ for pretrigger_sum_UpperThreshold in pretrigger_sum_UpperThreshold_ls:
     event_PassList= []
     event_FailList_3rdCut= []
     # wf_sum_post_cut_ls = []
+    # apply_cuts(wfs, pulse_difference_threshold=pulse_difference_threshold)
+    # apply_cuts(wfs, sigma_multiplier=sigma_multiplier)
     apply_cuts(wfs, pretrigger_sum_UpperThreshold=pretrigger_sum_UpperThreshold)
 
     hist_plot_range = (0e6, 5e6)
@@ -324,12 +328,15 @@ for pretrigger_sum_UpperThreshold in pretrigger_sum_UpperThreshold_ls:
     fig_2.savefig(path.join(output_subdir, 'successive_cuts.pdf'))
     plt.close(fig_2)
     # ax_5[1].plot(bin_edges[:-1], 1.-ratio_3_2, alpha=0.5, label = f'threshold = {pulse_difference_threshold}')
-    ax_5[1].plot(bin_edges[:-1], 1.-ratio_3_2, alpha=0.5, label = f'PreTrig Sum <= {pretrigger_sum_UpperThreshold}')
+    # ax_5[1].plot(bin_edges[:-1], 1.-ratio_2_1, alpha=0.5, label = f'sigma_multiplier = {sigma_multiplier}')
+    ax_5[1].plot(bin_edges[:-1], 1.-ratio_1_0, alpha=0.5, label = f'PreTrig Sum <= {pretrigger_sum_UpperThreshold}')
 ax_5[1].legend()
 ax_5[1].grid()
 # ax_5[1].set_yscale('log')
 ax_5[1].set_xlabel('Full WF sum')
 ax_5[1].set_ylabel('cut efficiency')
+# fig_5.savefig(path.join(output_subdir, 'cut3_eff_comparison.pdf'))
+# fig_5.savefig(path.join(output_subdir, 'cut2_eff_comparison.pdf'))
 fig_5.savefig(path.join(output_subdir, 'cut1_eff_comparison.pdf'))
 plt.close(fig_5)
 del bin_content_1, bin_content_2, bin_content_3, bin_edges, _PlotsObjects
