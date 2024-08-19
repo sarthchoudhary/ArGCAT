@@ -37,6 +37,10 @@ event_catalogue = pd.read_pickle(event_catalogue_file)
 wfs = event_catalogue['wf']
 del event_catalogue
 ## ----------------------------------------- function definitions -----------------------------------------
+def save_plot(fig:matplotlib.figure.Figure, file_name: str):
+    fig.savefig(path.join(output_subdir, f'{file_name}.pdf'))
+    pickle.dump(fig, open(path.join(output_subdir, f'{file_name}.pkl'),  'wb') )
+
 def create_flt_wfs(wfs):
     flt_dict = {0: [], 
                 1: [],
@@ -121,10 +125,9 @@ def histogram_filtered_wf_sum():
     hist_plot_range = (-2.5e6, 0.5e7)
     fig_2, ax_2 = plt.subplots( 1, 1, figsize=(10, 8), sharex=True, sharey = False)
     bin_content_0, bin_edges, _PlotsObjects = ax_2.hist(wf_sum_dict[0], bins=10000, range=hist_plot_range, label = 'full wf sum')
-    np.save(path.join(output_subdir, 'wf_sum_0_content.npy'), bin_content_0)
-    np.save(path.join(output_subdir, 'wf_sum_0_edges.npy'), bin_edges)
-    fig_2.savefig(path.join(output_subdir, 'hist_full_wf_sum.pdf'))
-    pickle.dump(fig_2, open(path.join(output_subdir, 'hist_full_wf_sum.pdf'),  'wb') )
+    # np.save(path.join(output_subdir, 'wf_sum_0_content.npy'), bin_content_0)
+    # np.save(path.join(output_subdir, 'wf_sum_0_edges.npy'), bin_edges)
+    save_plot(fig_2, 'hist_full_wf_sum')
     plt.close(fig_2)
 
 def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0, 
@@ -225,8 +228,7 @@ def histogram_wf_sum():
         ax_4[ch_id][0].hist(wf_sum_dict[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'full wf sum {ch_id}')
         ax_4[ch_id][0].legend()
         ax_4[ch_id][0].grid()
-    fig_4.savefig(path.join(output_subdir, 'hist_flt_wf.pdf'))
-    pickle.dump(fig_4, open(path.join(output_subdir, 'hist_flt_wf.pkl'),  'wb') )
+    save_plot(fig_4, 'hist_flt_wf')
     plt.close(fig_4)
 
 # histogram_wf_sum() # not in use
@@ -243,8 +245,7 @@ for ch_x in range(3):
     ax_0[ch_x].grid()
     plt.subplots_adjust(wspace=0.025, hspace=0.025)
     fig_0.suptitle('hist of pretrigger sum')
-fig_0.savefig(path.join(output_subdir, 'hist_pretrigger_sum.pdf'))
-pickle.dump(fig_0, open(path.join(output_subdir, 'hist_pretrigger_sum.pkl'),  'wb') )
+save_plot(fig_0, 'hist_pretrigger_sum')
 plt.close(fig_0)
 
 hist_features = {
@@ -265,8 +266,7 @@ for ch_x in range(3):
     plt.subplots_adjust(wspace=0.025, hspace=0.025)
     fig_1.suptitle('hist of Center Of Mass')
     com_mean_arr[ch_x], com_std_arr[ch_x] = fit_com_peak(ch_x, ax_1, hist_features)
-fig_1.savefig(path.join(output_subdir, 'hist_COM.pdf'))
-pickle.dump(fig_1, open(path.join(output_subdir, 'hist_COM.pkl'),  'wb') )
+save_plot(fig_1, 'hist_COM')
 plt.close(fig_1)
 del hist_features
 
@@ -315,8 +315,7 @@ for subplot_x in range(4):
 ax_2[4].legend()
 ax_2[4].set_ylabel('cut efficiency')
 ax_2[4].set_xlabel('Full WF sum')
-fig_2.savefig(path.join(output_subdir, 'successive_cuts.pdf'))
-pickle.dump(fig_2, open(path.join(output_subdir, 'successive_cuts.pkl'),  'wb') )
+save_plot(fig_2, 'successive_cuts')
 plt.close(fig_2)
 del bin_content_1, bin_content_2, bin_content_3, bin_edges, _PlotsObjects
 
@@ -328,8 +327,7 @@ for ch_id in range(3):
     ax_3[ch_id].grid()
 plt.subplots_adjust(wspace=0.025, hspace=0.025)
 fig_3.suptitle('hist of Center Of Mass post cuts')
-fig_3.savefig(path.join(output_subdir, 'hist_COM_post_cut.pdf'))
-pickle.dump(fig_3, open(path.join(output_subdir, 'hist_COM_post_cut.pkl'),  'wb') )
+save_plot(fig_3, 'hist_COM_post_cut')
 plt.close(fig_3)
 
 print(f'Execution time: {perf_counter() - t0}')
