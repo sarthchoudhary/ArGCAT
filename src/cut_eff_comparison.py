@@ -126,7 +126,11 @@ def histogram_filtered_wf_sum():
     fig_2.savefig(path.join(output_subdir, 'hist_full_wf_sum.pdf'))
     plt.close(fig_2)
 
-def apply_cuts(wfs, pulse_difference_threshold):
+def apply_cuts(wfs, pulse_difference_threshold=40, sigma_multiplier=1.75):
+    # com_threshold = 300 # not in use
+    ch_id = 1
+    com_below_xsigma = com_mean_arr - sigma_multiplier*com_std_arr # was 2 # explore and investigate thresholds
+    com_above_xsigma = com_mean_arr + sigma_multiplier*com_std_arr
     for event_x in range(wfs.shape[0]):
         if pretrigger_sum[0][event_x] <= 4000 and pretrigger_sum[0][event_x] >= -6000:
             wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
@@ -262,11 +266,6 @@ plt.close(fig_1)
 del hist_features
 
 ## ----------------------------------------- cuts -----------------------------------------
-# com_threshold = 300 # not in use
-ch_id = 1
-com_below_xsigma = com_mean_arr - 1.75*com_std_arr # was 2 # explore and investigate thresholds
-com_above_xsigma = com_mean_arr + 1.75*com_std_arr
-
 
 # apply_cuts(wfs, pulse_difference_threshold=40)
 hist_plot_range = (0e6, 5e6)
@@ -278,8 +277,10 @@ ax_5[0].legend()
 ax_5[0].grid()
 ax_5[0].set_ylabel('counts')
 
-pulse_difference_threshold_ls = [5, 10, 20, 40, 100, 150, 200, 500, 1000, 1500, 10_000]
-for pulse_difference_threshold in pulse_difference_threshold_ls:
+# pulse_difference_threshold_ls = [5, 10, 20, 40, 100, 150, 200, 500, 1000, 1500, 10_000]
+# for pulse_difference_threshold in pulse_difference_threshold_ls:
+sigma_multiplier_ls = [0.25, 0.75, 1.0, 1.5, 1.75, 2.0, 3.0, 4.0]
+for sigma_multiplier in sigma_multiplier_ls:
     com_post_cut_dict = {0: [],
                 1: [],
                 2: []
@@ -292,7 +293,7 @@ for pulse_difference_threshold in pulse_difference_threshold_ls:
     event_PassList= []
     event_FailList_3rdCut= []
     # wf_sum_post_cut_ls = []
-    apply_cuts(wfs, pulse_difference_threshold=pulse_difference_threshold)
+    apply_cuts(wfs, sigma_multiplier=sigma_multiplier)
 
     hist_plot_range = (0e6, 5e6)
     fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
@@ -320,15 +321,17 @@ for pulse_difference_threshold in pulse_difference_threshold_ls:
     ax_2[4].set_xlabel('Full WF sum')
     fig_2.savefig(path.join(output_subdir, 'successive_cuts.pdf'))
     plt.close(fig_2)
-    ax_5[1].plot(bin_edges[:-1], 1.-ratio_3_2, alpha=0.5, label = f'threshold = {pulse_difference_threshold}')
-    ax_5[1].legend()
-    ax_5[1].grid()
-    ax_5[1].set_xlabel('Full WF sum')
-    ax_5[1].set_ylabel('cut efficiency')
-    plt.close(fig_5)
-    del bin_content_1, bin_content_2, bin_content_3, bin_edges, _PlotsObjects
+    # ax_5[1].plot(bin_edges[:-1], 1.-ratio_3_2, alpha=0.5, label = f'threshold = {pulse_difference_threshold}')
+    ax_5[1].plot(bin_edges[:-1], 1.-ratio_3_2, alpha=0.5, label = f'sigma = {sigma_multiplier}')
+ax_5[1].legend()
+ax_5[1].grid()
+# ax_5[1].set_yscale('log')
+ax_5[1].set_xlabel('Full WF sum')
+ax_5[1].set_ylabel('cut efficiency')
+fig_5.savefig(path.join(output_subdir, 'cut2_eff_comparison.pdf'))
+plt.close(fig_5)
+del bin_content_1, bin_content_2, bin_content_3, bin_edges, _PlotsObjects
 
-fig_5.savefig(path.join(output_subdir, 'cut3_eff_comparison.pdf'))
 
 # fig_3, ax_3 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = True)
 # for ch_id in range(3):
