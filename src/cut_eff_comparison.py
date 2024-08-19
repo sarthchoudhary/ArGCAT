@@ -126,13 +126,14 @@ def histogram_filtered_wf_sum():
     fig_2.savefig(path.join(output_subdir, 'hist_full_wf_sum.pdf'))
     plt.close(fig_2)
 
-def apply_cuts(wfs, pulse_difference_threshold=40, sigma_multiplier=1.75):
+def apply_cuts(wfs, pretrigger_sum_UpperThreshold, sigma_multiplier=2.0, 
+               pulse_difference_threshold=40):
     # com_threshold = 300 # not in use
     ch_id = 1
     com_below_xsigma = com_mean_arr - sigma_multiplier*com_std_arr # was 2 # explore and investigate thresholds
     com_above_xsigma = com_mean_arr + sigma_multiplier*com_std_arr
     for event_x in range(wfs.shape[0]):
-        if pretrigger_sum[0][event_x] <= 4000 and pretrigger_sum[0][event_x] >= -6000:
+        if pretrigger_sum[0][event_x] <= pretrigger_sum_UpperThreshold and pretrigger_sum[0][event_x] >= -6000:
             wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
             # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
             if (com_dict[ch_id][event_x] <= com_above_xsigma)[ch_id] and (com_dict[ch_id][event_x] >= com_below_xsigma[ch_id]): # 3rd cut: distance from mean COM
@@ -279,8 +280,9 @@ ax_5[0].set_ylabel('counts')
 
 # pulse_difference_threshold_ls = [5, 10, 20, 40, 100, 150, 200, 500, 1000, 1500, 10_000]
 # for pulse_difference_threshold in pulse_difference_threshold_ls:
-sigma_multiplier_ls = [0.25, 0.75, 1.0, 1.5, 1.75, 2.0, 3.0, 4.0]
-for sigma_multiplier in sigma_multiplier_ls:
+# sigma_multiplier_ls = [0.25, 0.75, 1.0, 1.5, 1.75, 2.0, 3.0, 4.0]
+pretrigger_sum_UpperThreshold_ls = [500, 1000, 1500, 1750, 2000, 2500, 3000, 4000, 4500, 5000, 6000]
+for pretrigger_sum_UpperThreshold in pretrigger_sum_UpperThreshold_ls:
     com_post_cut_dict = {0: [],
                 1: [],
                 2: []
@@ -293,7 +295,7 @@ for sigma_multiplier in sigma_multiplier_ls:
     event_PassList= []
     event_FailList_3rdCut= []
     # wf_sum_post_cut_ls = []
-    apply_cuts(wfs, sigma_multiplier=sigma_multiplier)
+    apply_cuts(wfs, pretrigger_sum_UpperThreshold=pretrigger_sum_UpperThreshold)
 
     hist_plot_range = (0e6, 5e6)
     fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
@@ -322,13 +324,13 @@ for sigma_multiplier in sigma_multiplier_ls:
     fig_2.savefig(path.join(output_subdir, 'successive_cuts.pdf'))
     plt.close(fig_2)
     # ax_5[1].plot(bin_edges[:-1], 1.-ratio_3_2, alpha=0.5, label = f'threshold = {pulse_difference_threshold}')
-    ax_5[1].plot(bin_edges[:-1], 1.-ratio_3_2, alpha=0.5, label = f'sigma = {sigma_multiplier}')
+    ax_5[1].plot(bin_edges[:-1], 1.-ratio_3_2, alpha=0.5, label = f'PreTrig Sum <= {pretrigger_sum_UpperThreshold}')
 ax_5[1].legend()
 ax_5[1].grid()
 # ax_5[1].set_yscale('log')
 ax_5[1].set_xlabel('Full WF sum')
 ax_5[1].set_ylabel('cut efficiency')
-fig_5.savefig(path.join(output_subdir, 'cut2_eff_comparison.pdf'))
+fig_5.savefig(path.join(output_subdir, 'cut1_eff_comparison.pdf'))
 plt.close(fig_5)
 del bin_content_1, bin_content_2, bin_content_3, bin_edges, _PlotsObjects
 
