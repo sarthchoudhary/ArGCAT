@@ -6,6 +6,7 @@ t0 = perf_counter()
 
 import sys
 import numpy as np
+from matplotlib.offsetbox import AnchoredText
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import matplotlib
@@ -101,7 +102,7 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
         return f_k*(1/(f_sigma*np.sqrt(2*np.pi)))*np.exp(-0.5*((x-f_mean)/f_sigma)**2)
     
     hist_content, hist_edges, histObjects = hist_features[ch_x]
-    x_range = np.arange(235, 270)
+    x_range = np.arange(239, 268) #np.arange(235, 270)
     # x_range = np.arange(220, 281)
 
     p0_input = [1270, 208, 1e6]
@@ -117,6 +118,9 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
         )
 
     ax_1[ch_x].plot(hist_edges[x_range], f_gauss(hist_edges[x_range], *fitted_parameters), label='fit', color='red')
+    text_in_box = AnchoredText(f"statistics = {np.sum(hist_content[x_range])} \nreduced chisqr = {red_chisqr_value:.2f}", \
+                                            loc='upper left')
+    ax_1[ch_x].add_artist(text_in_box)
     ax_1[ch_x].legend()
 
 
