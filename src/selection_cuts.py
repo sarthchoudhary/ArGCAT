@@ -37,6 +37,18 @@ event_catalogue_file = path.join(data_dir, filename)
 event_catalogue = pd.read_pickle(event_catalogue_file)
 wfs = event_catalogue['wf']
 del event_catalogue
+
+## ----------------------------------------- ARMA -----------------------------------------
+from pyreco.manager.manager import Manager
+filename = '/work/sarthak/argset/data/run00126.mid.lz4'
+outfile = path.join(output_subdir, 'tempJupyR00126_from_script')
+confile = 'argset.ini'
+tmin,tmax = 0, 4000
+cmdline_args = f'--config {confile} -o {outfile} -i {filename}'
+m = Manager( midas=True, cmdline_args=cmdline_args)
+from pyreco.reco.filtering import WFFilter
+mfilter = WFFilter(m.config)
+
 ## ----------------------------------------- function definitions -----------------------------------------
 def save_plot(fig:matplotlib.figure.Figure, file_name: str):
     fig.savefig(path.join(output_subdir, f'{file_name}.pdf'))
@@ -129,13 +141,13 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
     print('\n')
     return fitted_parameters[0], fitted_parameters[1]
 
-def histogram_filtered_wf_sum():
+def histogram_wf_sum_ch(ch_id):
     hist_plot_range = (-2.5e6, 0.5e7)
     fig_2, ax_2 = plt.subplots( 1, 1, figsize=(10, 8), sharex=True, sharey = False)
-    bin_content_0, bin_edges, _PlotsObjects = ax_2.hist(wf_sum_dict[0], bins=10000, range=hist_plot_range, label = 'full wf sum')
+    bin_content_0, bin_edges, _PlotsObjects = ax_2.hist(wf_sum_dict[ch_id], bins=10000, range=hist_plot_range, label = f'{ch_id}: full wf sum')
     # np.save(path.join(output_subdir, 'wf_sum_0_content.npy'), bin_content_0)
     # np.save(path.join(output_subdir, 'wf_sum_0_edges.npy'), bin_edges)
-    save_plot(fig_2, 'hist_full_wf_sum')
+    save_plot(fig_2, f'hist_full_wf_sum_{ch_id}')
     plt.close(fig_2)
 
 def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0, 
@@ -176,6 +188,38 @@ def hist_pulse_difference():
     ax.set_yscale('log')
     ax.set_xlabel('pulse maxima difference in bin units')
     save_plot(fig, 'hist_pulse_difference')
+
+def perform_arma(og_wf):
+    flt = np.reshape(mfilter.numba_fast_filter(og_wf), newshape=og_wf.shape)
+    # mas = m.algos.running_mean(flt, gate=60)
+    # return flt - mas
+    return flt
+
+def histogram_wf_sum():
+
+    flt_wf_sum_dict = {
+        0: [],
+        1: [],
+        2: []
+    }
+    for event_id in range(wfs.shape[0]):
+        flt_wf_sum = np.sum(perform_arma(wfs[event_id]), axis=1)
+        flt_wf_sum_dict[1].append( flt_wf_sum[1] )
+        flt_wf_sum_dict[2].append( flt_wf_sum[2] )
+        flt_wf_sum_dict[0].append( flt_wf_sum[0] )
+
+    sum_hist_plot_range = (-2.5e6, 0.5e7)
+    # flt_hist_plot_range = (-100, 275)
+    fig_4, ax_4 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey = False)
+    for ch_id in range(3):
+        ax_4[ch_id][1].hist(flt_wf_sum_dict[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'filtered wf sum {ch_id}')
+        ax_4[ch_id][1].legend()
+        ax_4[ch_id][1].grid()
+        ax_4[ch_id][0].hist(wf_sum_dict[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'full wf sum {ch_id}')
+        ax_4[ch_id][0].legend()
+        ax_4[ch_id][0].grid()
+    save_plot(fig_4, 'hist_flt_wf')
+    plt.close(fig_4)
 
 def stack_flt_wf(flt_dict:dict):
     stacked_flt_wf_dict= {
@@ -234,56 +278,13 @@ for event_x in range(wfs.shape[0]):
     com_dict[2].append(com_arr[2])
 del com_arr
 
-## ----------------------------------------- ARMA -----------------------------------------
-from pyreco.manager.manager import Manager # TODO: move this inside perform_arma
-filename = '/work/sarthak/argset/data/run00126.mid.lz4'
-outfile = path.join(output_subdir, 'tempJupyR00126_from_script')
-confile = 'argset.ini'
-tmin,tmax = 0, 4000
-cmdline_args = f'--config {confile} -o {outfile} -i {filename}'
-m = Manager( midas=True, cmdline_args=cmdline_args)
-from pyreco.reco.filtering import WFFilter
-mfilter = WFFilter(m.config)
-
-def perform_arma(og_wf):
-    flt = np.reshape(mfilter.numba_fast_filter(og_wf), newshape=og_wf.shape)
-    # mas = m.algos.running_mean(flt, gate=60)
-    # return flt - mas
-    return flt
-
-flt_wf_sum = {
-    0: [],
-    1: [],
-    2: []
-}
-
-def histogram_wf_sum():
-    for event_id in range(wfs.shape[0]):
-        flt_wf = np.sum(perform_arma(wfs[event_id]), axis=1)
-        flt_wf_sum[1].append( flt_wf[1] )
-        flt_wf_sum[2].append( flt_wf[2] )
-        flt_wf_sum[0].append( flt_wf[0] )
-
-    sum_hist_plot_range = (-2.5e6, 0.5e7)
-    # flt_hist_plot_range = (-100, 275)
-    fig_4, ax_4 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey = False)
-    for ch_id in range(3):
-        ax_4[ch_id][1].hist(flt_wf_sum[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'filtered wf sum {ch_id}')
-        ax_4[ch_id][1].legend()
-        ax_4[ch_id][1].grid()
-        ax_4[ch_id][0].hist(wf_sum_dict[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'full wf sum {ch_id}')
-        ax_4[ch_id][0].legend()
-        ax_4[ch_id][0].grid()
-    save_plot(fig_4, 'hist_flt_wf')
-    plt.close(fig_4)
-
 # histogram_wf_sum() # not in use
 
 flt_dict = create_flt_wfs(wfs) # pass it to pulse_difference
 
-## ----------------------------------------- Histograms -----------------------------------------
+# hist_pulse_difference()
 
-hist_pulse_difference()
+## ----------------------------------------- Histograms -----------------------------------------
 
 fig_0, ax_0 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = False)
 for ch_x in range(3):
@@ -378,7 +379,9 @@ plt.subplots_adjust(wspace=0.025, hspace=0.025)
 fig_3.suptitle('hist of Center Of Mass post cuts')
 save_plot(fig_3, 'hist_COM_post_cut')
 plt.close(fig_3)
+## ----------------------------------------- Time Constant -----------------------------------------
+# stack_flt_wf(flt_dict)
+# stack_wf(wfs)
+## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
 
-stack_flt_wf(flt_dict) # temp
-stack_wf(wfs) # temp
 print(f'Execution time: {perf_counter() - t0}')
