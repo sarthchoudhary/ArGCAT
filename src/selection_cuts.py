@@ -387,8 +387,8 @@ del hist_features
 ## ----------------------------------------- cuts -----------------------------------------
 # com_threshold = 300 # not in use
 ch_id = 1
-com_below_xsigma = com_mean_arr - 1.75*com_std_arr # was 2 # explore and investigate thresholds
-com_above_xsigma = com_mean_arr + 1.75*com_std_arr
+# com_below_xsigma = com_mean_arr - 1.75*com_std_arr # was 2 # explore and investigate thresholds
+# com_above_xsigma = com_mean_arr + 1.75*com_std_arr
 
 wf_sum_post_cut_dict = {
     1: [],
@@ -403,7 +403,7 @@ event_PassList= []
 event_FailList_3rdCut= []
 # wf_sum_post_cut_ls = []
 
-apply_cuts(wfs, pulse_difference_threshold=40)
+apply_cuts(wfs)
 
 hist_plot_range = (0e6, 5e6)
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
