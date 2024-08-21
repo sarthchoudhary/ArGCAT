@@ -50,6 +50,9 @@ from pyreco.reco.filtering import WFFilter
 mfilter = WFFilter(m.config)
 
 ## ----------------------------------------- function definitions -----------------------------------------
+def f_gauss(x, f_mean, f_sigma, f_k):
+    return f_k*(1/(f_sigma*np.sqrt(2*np.pi)))*np.exp(-0.5*((x-f_mean)/f_sigma)**2)
+
 def save_plot(fig:matplotlib.figure.Figure, file_name: str):
     fig.savefig(path.join(output_subdir, f'{file_name}.pdf'))
     pickle.dump(fig, open(path.join(output_subdir, f'{file_name}.pkl'),  'wb') )
@@ -196,7 +199,6 @@ def perform_arma(og_wf):
     return flt
 
 def histogram_wf_sum():
-
     flt_wf_sum_dict = {
         0: [],
         1: [],
@@ -208,18 +210,80 @@ def histogram_wf_sum():
         flt_wf_sum_dict[2].append( flt_wf_sum[2] )
         flt_wf_sum_dict[0].append( flt_wf_sum[0] )
 
-    sum_hist_plot_range = (-2.5e6, 0.5e7)
+    hist_wf_sum_range = {0:(-2.5e6, 0.5e7), 1: (-1e6, 1e6), 2:(-1e6, 1e6)}
     # flt_hist_plot_range = (-100, 275)
     fig_4, ax_4 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey = False)
     for ch_id in range(3):
-        ax_4[ch_id][1].hist(flt_wf_sum_dict[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'filtered wf sum {ch_id}')
+        ax_4[ch_id][1].hist(flt_wf_sum_dict[ch_id], bins=10000, range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'filtered wf sum {ch_id}')
         ax_4[ch_id][1].legend()
         ax_4[ch_id][1].grid()
-        ax_4[ch_id][0].hist(wf_sum_dict[ch_id], bins=10000, range=sum_hist_plot_range, color=f'C{ch_id}', label = f'full wf sum {ch_id}')
+        ax_4[ch_id][0].hist(wf_sum_dict[ch_id], bins=10000, range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'full wf sum {ch_id}')
         ax_4[ch_id][0].legend()
         ax_4[ch_id][0].grid()
     save_plot(fig_4, 'hist_flt_wf')
     plt.close(fig_4)
+
+def histogram_wf_sum_before_and_after_cuts() -> dict:
+    hist_wf_sum = {0:0, 1:0, 2: 0}
+    hist_wf_sum_postcut = {0:0, 1:0, 2: 0}
+    hist_wf_sum_range = {0:(-2.5e6, 0.5e7), 1: (-1e6, 1e6), 2:(-1e6, 1e6)}
+    fig_5, ax_5 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey=False)
+    for ch_id in range(3):
+        wf_sum_ch = pd.Series(wf_sum_dict[ch_id])
+        hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=10000, 
+                        range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
+        ax_5[ch_id][0].set_title('wf sum')
+        ax_5[ch_id][0].legend()
+        ax_5[ch_id][0].grid()
+        hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, 
+                        range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
+        ax_5[ch_id][1].set_title('wf sum post cut')
+        ax_5[ch_id][1].legend()
+        ax_5[ch_id][1].grid()
+    save_plot(fig_5, 'histogram_wf_sum_before_and_after_cuts')
+    pickle_dict( hist_wf_sum_postcut, 'hist_wf_sum_postcut')
+    return hist_wf_sum_postcut
+
+def fit_charge_distribution(hist_wf_sum_postcut: dict):
+    fit_param_dict = {0:0, 1:0, 2:0}
+    red_chisqr_dict = {0:0, 1:0, 2:0}
+    x_range = {0: np.arange(5332, 7999), 1: np.arange(5549, 6149), 
+               2: np.arange(5900, 7400)} # (6169, 7250) (6219, 7199) (6149, 6899)
+    p0_input = {0: [2.5E6, 1E6, 100], 1: [0.18E6, 0.12E6, 100], 2: [0.32E6, 0.18E6, 100]}
+
+    fig_7, ax_7 = plt.subplots(3, 1, figsize=(10, 8))
+    for ch_id in range(3):
+        hist_content, hist_edges, _histObjects = hist_wf_sum_postcut[ch_id]
+        del _histObjects
+        ch_range = x_range[ch_id]
+        fitted_parameters, _pcov = curve_fit(f_gauss, 
+                                    hist_edges[ch_range], hist_content[ch_range], \
+                                    p0 = p0_input[ch_id],
+                                    )
+
+        red_chisqr_value = red_chisq(hist_content[ch_range], \
+            f_gauss(hist_edges[ch_range], *fitted_parameters), fitted_parameters
+        )
+        fit_param_dict[ch_id] = fitted_parameters
+        red_chisqr_dict[ch_id] = red_chisqr_value
+        ax_7[ch_id].plot(hist_edges[ch_range], f_gauss(hist_edges[ch_range], *fitted_parameters),
+                         label='fit', color='red')
+        text_in_box = AnchoredText(f"statistics = {np.sum(hist_content[ch_range])} \nreduced chisqr = {red_chisqr_value:.2f}", \
+                                                loc='upper left')
+        ax_7[ch_id].hist(hist_edges[:-1], hist_edges, weights=hist_content, 
+                         color=f'C{ch_id}', label =f'{ch_id}')
+        ax_7[ch_id].add_artist(text_in_box)
+        ax_7[ch_id].grid()
+        # ax_7[ch_id].set_title('Fit to distribution of full wf sum')
+        ax_7[ch_id].legend()
+    fig_7.suptitle('Fit to distribution of full wf sum')
+    save_plot(fig_7, 'charge_distribution_fit')
+    print('fit to charge distributions post cuts:')
+    print('\n')
+    for ch_id in range(3):
+        print(f'red. chisqr for {ch_id}: {red_chisqr_dict[ch_id]}')
+        print(f'fitted parameters for {ch_id}: {fit_param_dict[ch_id]}')
+    return fit_param_dict
 
 def stack_flt_wf(flt_dict:dict):
     stacked_flt_wf_dict= {
@@ -383,5 +447,8 @@ plt.close(fig_3)
 # stack_flt_wf(flt_dict)
 # stack_wf(wfs)
 ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
+hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts()
+# hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) # debug
+fit_charge_distribution(hist_wf_sum_postcut)
 
 print(f'Execution time: {perf_counter() - t0}')
