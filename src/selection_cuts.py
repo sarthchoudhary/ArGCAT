@@ -23,30 +23,33 @@ rc('axes', titlesize=20, titleweight='heavy', labelsize=16, labelweight='bold')
 rc(('xtick', 'ytick'), labelsize = 18)
 rc('legend', fontsize=14)
 
+np.set_printoptions(formatter={'float': lambda x: f"{x:10.4g}"})
+
 ## ----------------------------------------- loading data -----------------------------------------
 output_dir = '/home/sarthak/my_projects/argset/output'
 data_dir = '/work/chuck/sarthak/argset/event_catalogues'
 
 # filename = 'event_catalogue_run00126.pkl'
-filename = 'event_catalogue_run00126_part.pkl'
+# filename = 'event_catalogue_run00126_part.pkl'
+filename = 'event_catalogue_run00152_00.pkl'
 # filename = 'event_catalogue_run00152_01.pkl'
-# filename = 'event_catalogue_run00152_00.pkl'
+# filename = 'event_catalogue_run00159_00.pkl'
 file_basename = filename.split(sep='_run')[-1].split(sep='.')[0]
 output_subdir = path.join(output_dir, f'{file_basename}_output')
 if not path.isdir(output_subdir):
         os.mkdir(output_subdir)
-event_catalogue_file = path.join(data_dir, filename)
-event_catalogue = pd.read_pickle(event_catalogue_file)
+event_catalogue_path = path.join(data_dir, filename)
+event_catalogue = pd.read_pickle(event_catalogue_path)
 wfs = event_catalogue['wf']
 del event_catalogue
 
 ## ----------------------------------------- ARMA -----------------------------------------
 from pyreco.manager.manager import Manager
-filename = '/work/sarthak/argset/data/run00126.mid.lz4'
+raw_filename = '/work/sarthak/argset/data/run00126.mid.lz4'
 outfile = path.join(output_subdir, 'tempJupyR00126_from_script')
 confile = 'argset.ini'
 tmin,tmax = 0, 4000
-cmdline_args = f'--config {confile} -o {outfile} -i {filename}'
+cmdline_args = f'--config {confile} -o {outfile} -i {raw_filename}'
 m = Manager( midas=True, cmdline_args=cmdline_args)
 from pyreco.reco.filtering import WFFilter
 mfilter = WFFilter(m.config)
@@ -119,7 +122,10 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
         return f_k*(1/(f_sigma*np.sqrt(2*np.pi)))*np.exp(-0.5*((x-f_mean)/f_sigma)**2)
     
     hist_content, hist_edges, histObjects = hist_features[ch_x]
-    x_range = np.arange(239, 268) #np.arange(235, 270)
+    com_peak = np.argmax(hist_content)
+    x_range = np.arange(com_peak -18, com_peak +20)
+    # x_range = np.arange(239, 268) #run00126_part
+    # x_range = np.arange(235, 270)
     # x_range = np.arange(220, 281)
 
     p0_input = [1270, 208, 1e6]
@@ -139,7 +145,6 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
                                             loc='upper left')
     ax_1[ch_x].add_artist(text_in_box)
     ax_1[ch_x].legend()
-
 
     print(f'red_chisqr_value: {red_chisqr_value}')
     print(f'fitted_parameters for {ch_x}: {fitted_parameters}')
@@ -177,6 +182,7 @@ def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0,
                     com_post_cut_dict[2].append(com_dict[2][event_x])
                 else:
                     event_FailList_3rdCut.append(event_x)
+    print(f'Number of events passing all cuts: \n {len(event_PassList)}')
     np.save(path.join(output_subdir, 'event_PassList.npy'), np.array(event_PassList))
     np.save(path.join(output_subdir, 'event_FailList_3rdCut.npy'), np.array(event_FailList_3rdCut))
     # return com_post_cut_dict
@@ -229,16 +235,19 @@ def histogram_wf_sum():
 def histogram_wf_sum_before_and_after_cuts() -> dict:
     hist_wf_sum = {0:0, 1:0, 2: 0}
     hist_wf_sum_postcut = {0:0, 1:0, 2: 0}
-    hist_wf_sum_range = {0:(-2.5e6, 0.5e7), 1: (-1e6, 1e6), 2:(-1e6, 1e6)}
+    # hist_wf_sum_range = {0:(-2.5E6, 0.5E7), 1: (-1E6, 1E6), 2:(-1E6, 1E6)} #TPB
+    hist_wf_sum_range = {0:(-0.25E6, 2.75E6), 1: (-0.25E5, 0.25E6), 2:(-0.25E5, 0.5E6)} #run00152
     fig_5, ax_5 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey=False)
     for ch_id in range(3):
         wf_sum_ch = pd.Series(wf_sum_dict[ch_id])
-        hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=10000, 
+        # hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=10000, 
+        hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=5000, 
                         range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
         ax_5[ch_id][0].set_title('waveform sum')
         ax_5[ch_id][0].legend()
         ax_5[ch_id][0].grid()
-        hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, 
+        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, #TPB
+        hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=5000, #run00152
                         range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
         ax_5[ch_id][1].set_title('wf sum post cut')
         ax_5[ch_id][1].legend()
@@ -250,16 +259,22 @@ def histogram_wf_sum_before_and_after_cuts() -> dict:
 def fit_charge_distribution(hist_wf_sum_postcut: dict):
     fit_param_dict = {0:0, 1:0, 2:0}
     red_chisqr_dict = {0:0, 1:0, 2:0}
-    x_range = {0: np.arange(5332, 7999), 1: np.arange(5549, 6149), 
-               2: np.arange(5900, 7400)} # (6169, 7250) (6219, 7199) (6149, 6899)
+    peak_loc = {0:0, 1:0, 2:0}
+    x_range = {0: 0,1: 0,2: 0}
+    for ch_id in range(3): # from PEN run00152
+        peak_loc[ch_id] = np.argmax(hist_wf_sum_postcut[ch_id][0])
+        x_range[ch_id] = np.arange(peak_loc[ch_id]-600, peak_loc[ch_id] + 1000)
+    # x_range = {0: np.arange(2912, 3560), 1: np.arange(2800, 3534), 2: np.arange(2003, 2803)}  # PEN run00152
+    # x_range = {0: np.arange(5332, 7999), 1: np.arange(5549, 6149), # TPB run00126
+    #            2: np.arange(5900, 7400)} # (6169, 7250) (6219, 7199) (6149, 6899)
     p0_input = {0: [2.5E6, 1E6, 100], 1: [0.18E6, 0.12E6, 100], 2: [0.32E6, 0.18E6, 100]}
 
-    fig_7, ax_7 = plt.subplots(3, 1, figsize=(10, 8))
+    fig_7, ax_7 = plt.subplots(3, 1, figsize=(18, 16))
     for ch_id in range(3):
         hist_content, hist_edges, _histObjects = hist_wf_sum_postcut[ch_id]
         del _histObjects
         ch_range = x_range[ch_id]
-        fitted_parameters, _pcov = curve_fit(f_gauss, 
+        fitted_parameters, _pcov = curve_fit(f_gauss, #TODO: report uncertainity from pcov as well
                                     hist_edges[ch_range], hist_content[ch_range], \
                                     p0 = p0_input[ch_id],
                                     )
@@ -314,7 +329,7 @@ def stack_wf(wfs:pd.core.series.Series):
     return stacked_wf_dict
 
 def calculate_time_constant():
-
+    print('\n calculating time constant..')
     def f1_func(x: np.ndarray, a0: float, a2: float, a3: float, a4: float) -> np.ndarray:
        return (a0)*np.exp(-(x)/a2) + (a3)*np.exp(-(x)/a4)
     # def f0_func(x, a0, a1, a2, a3, a4):
@@ -334,7 +349,6 @@ def calculate_time_constant():
         return fitted_parameters
 
     def fit_all_channels(data_name:str, wf_data: np.ndarray):
-        print('Starting the time constant calculation..')
         (fit_begin, fit_end) = (50, 750)
         fit_param_dict= {0:0, 1:0, 2:0}
         red_chisqr_dict = {0:0, 1:0, 2:0}
@@ -396,12 +410,12 @@ def calculate_time_constant():
         else:
             save_plot(fig_8, 'stacked_wf') 
 
-        print(f'Results using {data_name}:')
+        print(f'\n Results using {data_name}:')
         for ch_id in range(3):
             print(f'red. chisqr {ch_id}:{red_chisqr_dict[ch_id]}')
             print(f'fit param {ch_id}:{fit_param_dict[ch_id]}')
         if statbox_ls_0:
-            print(f'Results using Unshifted waveform:')
+            print(f'\n Results using Unshifted waveform:')
             for ch_id in range(3):
                 print(f'red. chisqr {ch_id}:{red_chisqr_dict_0[ch_id]}')
                 print(f'fit param {ch_id}:{fit_param_dict_0[ch_id]}')
@@ -416,7 +430,7 @@ def calculate_time_constant():
 
 ## ----------------------------------------- program -----------------------------------------
 
-print(f'Analysis started...')
+print(f'\n' + 'Analysis started...')
 print(f'processing {filename}...')
 ch_id = 0
 
@@ -477,6 +491,8 @@ com_mean_arr = np.zeros([3,])
 com_std_arr = np.zeros([3,])
 
 fig_1, ax_1 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = True)
+
+print(f'\n fitting COM distribution peak..')
 for ch_x in range(3):
     hist_features[ch_x] = ( ax_1[ch_x].hist(com_dict[ch_x], bins=np.arange(-5_000, 5_000, 25), 
                             color=f'C{ch_x}', label = f'{ch_x}')
@@ -511,7 +527,8 @@ event_FailList_3rdCut= []
 
 apply_cuts(wfs)
 
-hist_plot_range = (0e6, 5e6)
+# hist_plot_range = (0e6, 5e6) #run00126
+hist_plot_range = (0e6, 2.5e6)
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
 bin_content_0, bin_edges, _PlotsObjects = ax_2[0].hist(wf_sum_dict[0], bins=500, range = hist_plot_range, label = 'No cut [Channel 0]')
 bin_content_1, bin_edges, _PlotsObjects = ax_2[1].hist(wf_sum_post_cut_dict[1], bins=bin_edges, range = hist_plot_range, label = '1st cut [Channel 0]')
@@ -551,7 +568,8 @@ save_plot(fig_3, 'hist_COM_post_cut')
 plt.close(fig_3)
 ## ----------------------------------------- Time Constant -----------------------------------------
 
-fit_param_dict, red_chisqr_dict = calculate_time_constant()
+# sys.exit() #debug
+# fit_param_dict, red_chisqr_dict = calculate_time_constant()
 
 ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
 hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts()
