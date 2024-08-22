@@ -29,6 +29,8 @@ data_dir = '/work/chuck/sarthak/argset/event_catalogues'
 
 # filename = 'event_catalogue_run00126.pkl'
 filename = 'event_catalogue_run00126_part.pkl'
+# filename = 'event_catalogue_run00152_01.pkl'
+# filename = 'event_catalogue_run00152_00.pkl'
 file_basename = filename.split(sep='_run')[-1].split(sep='.')[0]
 output_subdir = path.join(output_dir, f'{file_basename}_output')
 if not path.isdir(output_subdir):
@@ -88,7 +90,7 @@ def pulse_difference(event_x, use_flt_wf:bool):
     if use_flt_wf:
         # window_range = np.arange(350, 500)
         window_range = np.arange(350, 4000)
-        peaks0 =find_peaks(flt_dict[0][event_x][window_range]) # TODO: better code
+        peaks0 =find_peaks(flt_dict[0][event_x][window_range]) # TODO: find_peaks is probably unnecessary if only the maxima is needed
         peaks1 =find_peaks(flt_dict[1][event_x][window_range]) # same
         peaks2 =find_peaks(flt_dict[2][event_x][window_range]) # same
         mp0 = np.argmax(flt_dict[0][event_x][window_range][peaks0[0]])
@@ -199,6 +201,7 @@ def perform_arma(og_wf):
     return flt
 
 def histogram_wf_sum():
+    '''comparison of wf sum histogram for filtered and unfiltered waveforms.'''
     flt_wf_sum_dict = {
         0: [],
         1: [],
@@ -285,33 +288,32 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict):
         print(f'fitted parameters for {ch_id}: {fit_param_dict[ch_id]}')
     return fit_param_dict
 
-def calculate_time_constant(): #TODO: this takes data_name, wf_data as input
+def stack_flt_wf(flt_dict:dict):
+    stacked_flt_wf_dict= {
+    0:np.zeros_like(wfs[0][0]),
+    1:np.zeros_like(wfs[0][0]),
+    2:np.zeros_like(wfs[0][0]),
+    }
+    for ch_id in range(3):
+        # stacked_flt_wf_dict[ch_id] = pd.Series(flt_dict[ch_id])[event_PassList]  #TODO: loop can be skipped using pandas.Series
+        for event_id in event_PassList:
+            stacked_flt_wf_dict[ch_id] += flt_dict[ch_id][event_id]
+    # pickle_dict(stacked_flt_wf_dict, 'stacked_flt_wf_dict')
+    return stacked_flt_wf_dict
 
-    def stack_flt_wf(flt_dict:dict): #TODO: out of this function.
-        stacked_flt_wf_dict= {
-        0:np.zeros_like(wfs[0][0]),
-        1:np.zeros_like(wfs[0][0]),
-        2:np.zeros_like(wfs[0][0]),
-        }
-        # stacked_flt_wf_dict[ch_id] = np.sum(np.array(flt_dict[ch_id]), axis=0)
-        for ch_id in range(3):
-            # stacked_flt_wf_dict[ch_id] = pd.Series(flt_dict[ch_id])[event_PassList]
-            for event_id in event_PassList: #TODO: loop can be skipped using pandas.Series
-                stacked_flt_wf_dict[ch_id] += flt_dict[ch_id][event_id]
-        # pickle_dict(stacked_flt_wf_dict, 'stacked_flt_wf_dict')
-        return stacked_flt_wf_dict
+def stack_wf(wfs:pd.core.series.Series):
+    stacked_wf_dict = {
+    0:np.zeros_like(wfs[0][0]),
+    1:np.zeros_like(wfs[0][0]),
+    2:np.zeros_like(wfs[0][0])
+    }
+    for ch_id in range(3):
+        for event_id in range(wfs.shape[0]):
+            stacked_wf_dict[ch_id] += wfs[event_id][ch_id]
+    # pickle_dict(stacked_wf_dict, 'stacked_wf_dict')
+    return stacked_wf_dict
 
-    def stack_wf(wfs:pd.core.series.Series): #TODO: out of this function.
-        stacked_wf_dict = {
-        0:np.zeros_like(wfs[0][0]),
-        1:np.zeros_like(wfs[0][0]),
-        2:np.zeros_like(wfs[0][0])
-        }
-        for ch_id in range(3):
-            for event_id in range(wfs.shape[0]):
-                stacked_wf_dict[ch_id] += wfs[event_id][ch_id]
-        # pickle_dict(stacked_wf_dict, 'stacked_wf_dict')
-        return stacked_wf_dict
+def calculate_time_constant():
 
     def f1_func(x: np.ndarray, a0: float, a2: float, a3: float, a4: float) -> np.ndarray:
        return (a0)*np.exp(-(x)/a2) + (a3)*np.exp(-(x)/a4)
@@ -331,31 +333,30 @@ def calculate_time_constant(): #TODO: this takes data_name, wf_data as input
                                 )
         return fitted_parameters
 
-    def fit_all_channels(wf_data: np.ndarray):
+    def fit_all_channels(data_name:str, wf_data: np.ndarray):
+        print('Starting the time constant calculation..')
         (fit_begin, fit_end) = (50, 750)
         fit_param_dict= {0:0, 1:0, 2:0}
         red_chisqr_dict = {0:0, 1:0, 2:0}
         statbox_ls = []
-        # statbox_ls_0 = [] # _0 for unshifted waveform
-        # fit_param_dict_0= {0:0, 1:0, 2:0}
-        # red_chisqr_dict_0 = {0:0, 1:0, 2:0}
+        statbox_ls_0 = [] # _0 for unshifted waveform
+        fit_param_dict_0= {0:0, 1:0, 2:0}
+        red_chisqr_dict_0 = {0:0, 1:0, 2:0}
 
         fig_8, ax_8 = plt.subplots(2,1, figsize=(10,8), sharex=True)
         for ch_id in range(3):
             wf_ch_data = wf_data[ch_id]
-            # wf_peak_ch = np.argmax(stacked_flt_wf_dict[ch_id])
             wf_peak_ch = np.argmax(wf_ch_data)
             f1_range = np.arange(wf_ch_data.shape[0])
             f_xrange = 4*f1_range
-            # ax_8[0].plot(np.arange(4000)*4.0, stacked_flt_wf_dict[ch_id], label = f'{ch_id}') 
             ax_8[0].plot(4*f1_range, wf_ch_data, label = f'{ch_id}')
-            # # RE-define f0_func here: with a1 = wf_peak_ch
+            # # TODO: make f0_func work for unshifted wf
+            # # RE-define f0_func here: with a1 = wf_peak_ch #debug
             # def f0_func(x, a0, a2, a3, a4):
             #     a1 = wf_peak_ch# debug
             #     return (a0/a2)*np.exp(-(x-a1)/a2) + (a3/a4)*np.exp(-(x-a1)/a4)
             # fit_param_dict_0[ch_id] = fit_stack(f0_func, wf_ch_data, 
             #                                     (fit_begin+wf_peak_ch, fit_end+wf_peak_ch), f1_range)
-            # TODO: make f0_func work for unshifted wf
             # ax_8[0].plot(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
             #              f0_func(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
             #                   *fit_param_dict_0[ch_id]), linewidth=2.5, label=f'fit {ch_id}')
@@ -364,12 +365,9 @@ def calculate_time_constant(): #TODO: this takes data_name, wf_data as input
             #                         *fit_param_dict_0[ch_id]), fit_param_dict_0[ch_id])
             # statbox_ls_0.append(f'{ch_id} red. chisqr = {red_chisqr_dict_0[ch_id]:.2f}')
             
-            # shifted_flt_wf[ch_id] = stacked_flt_wf_dict[ch_id][0+wf_peak_ch:4000+wf_peak_ch]
             shifted_wf_ch_data = wf_ch_data[0+wf_peak_ch:4000+wf_peak_ch]
-            # f1_range = np.arange(shifted_flt_wf[ch_id].shape[0])
             f1_range = np.arange(shifted_wf_ch_data.shape[0])
             f_xrange = 4*f1_range
-            # ax_8[1].plot(f_xrange, shifted_flt_wf[ch_id], color = f'C{ch_id}', label = f'{ch_id}')
             ax_8[1].plot(f_xrange, shifted_wf_ch_data, color = f'C{ch_id}', label = f'{ch_id}')
             fit_param_dict[ch_id] = fit_stack(f1_func, shifted_wf_ch_data, (fit_begin, fit_end), f1_range)
             ax_8[1].plot(f_xrange[fit_begin:fit_end], f1_func(f_xrange[fit_begin:fit_end], 
@@ -378,14 +376,14 @@ def calculate_time_constant(): #TODO: this takes data_name, wf_data as input
                                         f1_func(f_xrange[fit_begin:fit_end], *fit_param_dict[ch_id]), 
                                         fit_param_dict[ch_id])
             statbox_ls.append(f'{ch_id} red. chisqr = {red_chisqr_dict[ch_id]:.2f}')
-        # text_in_box_0 = AnchoredText('\n'.join(statbox_ls_0), loc='upper center')
+        # text_in_box_0 = AnchoredText('\n'.join(statbox_ls_0), loc='upper center') #debug
         # ax_8[0].add_artist(text_in_box_0) #debug
         text_in_box = AnchoredText('\n'.join(statbox_ls), loc='upper center')
         ax_8[0].legend()
-        ax_8[0].set_title('stacked filtered wf')
+        ax_8[0].set_title(f'stacked {data_name}') # =filtered wf
         ax_8[0].set_yscale('log')
         ax_8[0].grid()
-        ax_8[1].set_title('shifted truncated filtered wf')
+        ax_8[1].set_title(f'shifted truncated {data_name}')
         ax_8[1].set_xlabel('time [ns]')
         ax_8[1].set_yscale('log')
         ax_8[1].grid()
@@ -393,29 +391,33 @@ def calculate_time_constant(): #TODO: this takes data_name, wf_data as input
         ax_8[1].axvline(x=f_xrange[fit_begin], color='grey', linestyle='--')
         ax_8[1].axvline(x=f_xrange[fit_end], color='grey', linestyle='--')
         ax_8[1].legend()
-        save_plot(fig_8, 'stacked_flt_wf') #TODO: use dict for auto
-        print(f'Results:')
+        if 'Filtered' in data_name:
+            save_plot(fig_8, 'stacked_flt_wf')
+        else:
+            save_plot(fig_8, 'stacked_wf') 
+
+        print(f'Results using {data_name}:')
         for ch_id in range(3):
             print(f'red. chisqr {ch_id}:{red_chisqr_dict[ch_id]}')
             print(f'fit param {ch_id}:{fit_param_dict[ch_id]}')
+        if statbox_ls_0:
+            print(f'Results using Unshifted waveform:')
+            for ch_id in range(3):
+                print(f'red. chisqr {ch_id}:{red_chisqr_dict_0[ch_id]}')
+                print(f'fit param {ch_id}:{fit_param_dict_0[ch_id]}')
         return fit_param_dict, red_chisqr_dict
-
-    # stacked_flt_wf_dict = stack_flt_wf(flt_dict) #TODO: uncomment
-    stacked_flt_wf_dict = pickle.load(open('../output/00126_part_output/stacked_flt_wf_dict.pkl', 'rb')) #debug
-    # stacked_wf_dict = stack_wf(wfs) #TODO: uncomment
-    # shifted_flt_wf = {0:0, 1:0, 2:0}
-    # print(f'time constant calculation using filtered waveform...') # TODO use dict for auto
-    # fit_param_dict, red_chisqr_dict = fit_all_channels(f0_func, stacked_flt_wf_dict, ax_8[0])
-    print(f'\n time constant calculation using filtered waveform...')
-    fit_param_dict, red_chisqr_dict = fit_all_channels(stacked_flt_wf_dict)#, ax_8[1])
-    # print(f'time constant calculation using UNfiltered waveform...')
-    # fit_param_dict, red_chisqr_dict = fit_all_channels(f0_func, stacked_wf_dict, ax_9[0])
-    # print(f'time constant calculation using UNfiltered waveform...')
-    # fit_param_dict, red_chisqr_dict = fit_all_channels(f1_func, shifted_wf, ax_9[1])
-
+    stacked_flt_wf_dict = stack_flt_wf(flt_dict)
+    # stacked_flt_wf_dict = pickle.load(open('../output/00126_part_output/stacked_flt_wf_dict.pkl', 'rb')) #debug
+    stacked_wf_dict = stack_wf(wfs)
+    # stacked_wf_dict = pickle.load(open('../output/00126_part_output/stacked_wf_dict.pkl', 'rb')) #debug
+    fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked Filtered wf', stacked_flt_wf_dict)
+    fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked wf', stacked_wf_dict)
     return fit_param_dict, red_chisqr_dict #TODO: write to csv.
 
 ## ----------------------------------------- program -----------------------------------------
+
+print(f'Analysis started...')
+print(f'processing {filename}...')
 ch_id = 0
 
 pretrigger_sum = {
@@ -548,13 +550,13 @@ fig_3.suptitle('Histogram of Center Of Mass post cuts')
 save_plot(fig_3, 'hist_COM_post_cut')
 plt.close(fig_3)
 ## ----------------------------------------- Time Constant -----------------------------------------
-# stacked_flt_wf_dict = stack_flt_wf(flt_dict)
-# stacked_wf_dict = stack_wf(wfs)
+
 fit_param_dict, red_chisqr_dict = calculate_time_constant()
+
 ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
-hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts() #TODO: uncomment
-# hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) # debug
-fit_charge_distribution(hist_wf_sum_postcut) #TODO: uncomment
+hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts()
+# hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
+fit_charge_distribution(hist_wf_sum_postcut)
 
 
 print(f'Execution time: {perf_counter() - t0}')
