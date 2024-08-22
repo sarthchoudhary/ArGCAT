@@ -123,7 +123,7 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
     
     hist_content, hist_edges, histObjects = hist_features[ch_x]
     com_peak = np.argmax(hist_content)
-    x_range = np.arange(com_peak -18, com_peak +20)
+    x_range = np.arange(com_peak -18, com_peak +20) # dynamic works for 152
     # x_range = np.arange(239, 268) #run00126_part
     # x_range = np.arange(235, 270)
     # x_range = np.arange(220, 281)
@@ -235,7 +235,7 @@ def histogram_wf_sum():
 def histogram_wf_sum_before_and_after_cuts() -> dict:
     hist_wf_sum = {0:0, 1:0, 2: 0}
     hist_wf_sum_postcut = {0:0, 1:0, 2: 0}
-    # hist_wf_sum_range = {0:(-2.5E6, 0.5E7), 1: (-1E6, 1E6), 2:(-1E6, 1E6)} #TPB
+    # hist_wf_sum_range = {0:(-2.5E6, 0.5E7), 1: (-1E6, 1E6), 2:(-1E6, 1E6)} #run00126
     hist_wf_sum_range = {0:(-0.25E6, 2.75E6), 1: (-0.25E5, 0.25E6), 2:(-0.25E5, 0.5E6)} #run00152
     fig_5, ax_5 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey=False)
     for ch_id in range(3):
@@ -246,7 +246,7 @@ def histogram_wf_sum_before_and_after_cuts() -> dict:
         ax_5[ch_id][0].set_title('waveform sum')
         ax_5[ch_id][0].legend()
         ax_5[ch_id][0].grid()
-        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, #TPB
+        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, #run00126
         hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=5000, #run00152
                         range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
         ax_5[ch_id][1].set_title('wf sum post cut')
@@ -261,7 +261,7 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict):
     red_chisqr_dict = {0:0, 1:0, 2:0}
     peak_loc = {0:0, 1:0, 2:0}
     x_range = {0: 0,1: 0,2: 0}
-    for ch_id in range(3): # from PEN run00152
+    for ch_id in range(3): # dynamic
         peak_loc[ch_id] = np.argmax(hist_wf_sum_postcut[ch_id][0])
         x_range[ch_id] = np.arange(peak_loc[ch_id]-600, peak_loc[ch_id] + 1000)
     # x_range = {0: np.arange(2912, 3560), 1: np.arange(2800, 3534), 2: np.arange(2003, 2803)}  # PEN run00152
@@ -528,7 +528,7 @@ event_FailList_3rdCut= []
 apply_cuts(wfs)
 
 # hist_plot_range = (0e6, 5e6) #run00126
-hist_plot_range = (0e6, 2.5e6)
+hist_plot_range = (0e6, 2.5e6) #run00152
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
 bin_content_0, bin_edges, _PlotsObjects = ax_2[0].hist(wf_sum_dict[0], bins=500, range = hist_plot_range, label = 'No cut [Channel 0]')
 bin_content_1, bin_edges, _PlotsObjects = ax_2[1].hist(wf_sum_post_cut_dict[1], bins=bin_edges, range = hist_plot_range, label = '1st cut [Channel 0]')
