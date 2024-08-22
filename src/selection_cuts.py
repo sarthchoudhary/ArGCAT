@@ -34,6 +34,7 @@ data_dir = '/work/chuck/sarthak/argset/event_catalogues'
 filename = 'event_catalogue_run00152_00.pkl'
 # filename = 'event_catalogue_run00152_01.pkl'
 # filename = 'event_catalogue_run00159_00.pkl'
+## some object to quicky switch between hist features for PEN and TPB runs
 file_basename = filename.split(sep='_run')[-1].split(sep='.')[0]
 output_subdir = path.join(output_dir, f'{file_basename}_output')
 if not path.isdir(output_subdir):
@@ -258,6 +259,7 @@ def histogram_wf_sum_before_and_after_cuts() -> dict:
 
 def fit_charge_distribution(hist_wf_sum_postcut: dict):
     fit_param_dict = {0:0, 1:0, 2:0}
+    fit_std_dict = {0:0, 1:0, 2:0}
     red_chisqr_dict = {0:0, 1:0, 2:0}
     peak_loc = {0:0, 1:0, 2:0}
     x_range = {0: 0,1: 0,2: 0}
@@ -274,7 +276,7 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict):
         hist_content, hist_edges, _histObjects = hist_wf_sum_postcut[ch_id]
         del _histObjects
         ch_range = x_range[ch_id]
-        fitted_parameters, _pcov = curve_fit(f_gauss, #TODO: report uncertainity from pcov as well
+        fitted_parameters, pcov = curve_fit(f_gauss,
                                     hist_edges[ch_range], hist_content[ch_range], \
                                     p0 = p0_input[ch_id],
                                     )
@@ -283,6 +285,7 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict):
             f_gauss(hist_edges[ch_range], *fitted_parameters), fitted_parameters
         )
         fit_param_dict[ch_id] = fitted_parameters
+        fit_std_dict[ch_id] = np.sqrt(np.diag(pcov)) 
         red_chisqr_dict[ch_id] = red_chisqr_value
         ax_7[ch_id].hist(hist_edges[:-1], hist_edges, weights=hist_content, histtype='stepfilled',
                          color=f'C{ch_id}', label =f'{ch_id}')
@@ -301,6 +304,7 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict):
     for ch_id in range(3):
         print(f'red. chisqr for {ch_id}: {red_chisqr_dict[ch_id]}')
         print(f'fitted parameters for {ch_id}: {fit_param_dict[ch_id]}')
+        print(f'std deviation for the fitted parameters for {ch_id}: {fit_std_dict[ch_id]}')
     return fit_param_dict
 
 def stack_flt_wf(flt_dict:dict):
