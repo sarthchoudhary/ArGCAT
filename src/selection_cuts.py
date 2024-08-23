@@ -43,6 +43,10 @@ event_catalogue_path = path.join(data_dir, filename)
 event_catalogue = pd.read_pickle(event_catalogue_path)
 wfs = event_catalogue['wf']
 del event_catalogue
+## remove first 5 hours of data for runs which started taking data while still warm
+# truncate_till = 13000
+# wfs= wfs.truncate(before=truncate_till) #TODO: comment out if not needed
+# print(f'Caution: discarding initial 13000 events!')
 
 ## ----------------------------------------- ARMA -----------------------------------------
 from pyreco.manager.manager import Manager
@@ -81,13 +85,13 @@ def pulse_difference(event_x, use_flt_wf:bool):
     if not use_flt_wf:
         # window_range = np.arange(350, 500)
         window_range = np.arange(350, 4000)
-        peaks0 =find_peaks(wfs[event_x][0][window_range])
-        peaks1 =find_peaks(wfs[event_x][1][window_range])
-        peaks2 =find_peaks(wfs[event_x][2][window_range])
-        mp0 = np.argmax(wfs[event_x][0][window_range][peaks0[0]])
-        mp1 = np.argmax(wfs[event_x][1][window_range][peaks1[0]])
-        mp2 = np.argmax(wfs[event_x][2][window_range][peaks2[0]])
-        sample_mp0 = wfs[event_x][0][window_range][peaks0[0]][mp0]
+        peaks0 =find_peaks(wfs.iloc[event_x][0][window_range])
+        peaks1 =find_peaks(wfs.iloc[event_x][1][window_range])
+        peaks2 =find_peaks(wfs.iloc[event_x][2][window_range])
+        mp0 = np.argmax(wfs.iloc[event_x][0][window_range][peaks0[0]])
+        mp1 = np.argmax(wfs.iloc[event_x][1][window_range][peaks1[0]])
+        mp2 = np.argmax(wfs.iloc[event_x][2][window_range][peaks2[0]])
+        sample_mp0 = wfs.iloc[event_x][0][window_range][peaks0[0]][mp0]
         sample_mp1 = window_range[peaks1[0]][mp1]
         sample_mp2 = window_range[peaks2[0]][mp2]
 
@@ -107,8 +111,8 @@ def pulse_difference(event_x, use_flt_wf:bool):
     return abs(sample_mp1 - sample_mp2)
 
 def calculate_com(event_x):
-    event_com = np.divide(np.sum(np.multiply(wfs[event_x], np.arange(wfs[event_x].shape[1])), axis=1), 
-                      np.sum(wfs[event_x], axis=1)
+    event_com = np.divide(np.sum(np.multiply(wfs.iloc[event_x], np.arange(wfs.iloc[event_x].shape[1])), axis=1), 
+                      np.sum(wfs.iloc[event_x], axis=1)
                 )
     return event_com
 
@@ -167,7 +171,7 @@ def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0,
     ch_id = 1
     com_below_xsigma = com_mean_arr - sigma_multiplier*com_std_arr # was 2 # explore and investigate thresholds
     com_above_xsigma = com_mean_arr + sigma_multiplier*com_std_arr
-    for event_x in range(wfs.shape[0]):
+    for event_x in range(wfs.shape[0]): #event_x is NOT pandas index.
         if pretrigger_sum[0][event_x] <= pretrigger_sum_UpperThreshold and pretrigger_sum[0][event_x] >= -6000:
             wf_sum_post_cut_dict[1].append(wf_sum_dict[0][event_x]) # sum is always taken from channel 0; should we change it?
             # if (np.abs(com_dict[0][event_x] - com_dict[1][event_x]) <= com_threshold) and (np.abs(com_dict[2][event_x] - com_dict[1][event_x]) <= com_threshold): # 3rd cut: concurrence of COM
@@ -177,7 +181,7 @@ def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0,
                 if pulse_difference(event_x, use_flt_wf=True) <= pulse_difference_threshold: # 2nd cut: simultaneity of pulses
                     wf_sum_post_cut_dict[3].append(wf_sum_dict[0][event_x])
                     event_PassList.append(event_x) # these events should be pickled or passed for further processing
-                    # wf_sum_post_cut_ls.append(np.sum(wfs[event_x][ch_id]))
+                    # wf_sum_post_cut_ls.append(np.sum(wfs.iloc[event_x][ch_id]))
                     com_post_cut_dict[0].append(com_dict[0][event_x])
                     com_post_cut_dict[1].append(com_dict[1][event_x])
                     com_post_cut_dict[2].append(com_dict[2][event_x])
@@ -215,7 +219,7 @@ def histogram_wf_sum():
         2: []
     }
     for event_id in range(wfs.shape[0]):
-        flt_wf_sum = np.sum(perform_arma(wfs[event_id]), axis=1)
+        flt_wf_sum = np.sum(perform_arma(wfs.iloc[event_id]), axis=1)
         flt_wf_sum_dict[1].append( flt_wf_sum[1] )
         flt_wf_sum_dict[2].append( flt_wf_sum[2] )
         flt_wf_sum_dict[0].append( flt_wf_sum[0] )
@@ -309,9 +313,9 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict):
 
 def stack_flt_wf(flt_dict:dict):
     stacked_flt_wf_dict= {
-    0:np.zeros_like(wfs[0][0]),
-    1:np.zeros_like(wfs[0][0]),
-    2:np.zeros_like(wfs[0][0]),
+    0:np.zeros_like(wfs.iloc[0][0]),
+    1:np.zeros_like(wfs.iloc[0][0]),
+    2:np.zeros_like(wfs.iloc[0][0]),
     }
     for ch_id in range(3):
         # stacked_flt_wf_dict[ch_id] = pd.Series(flt_dict[ch_id])[event_PassList]  #TODO: loop can be skipped using pandas.Series
@@ -322,13 +326,13 @@ def stack_flt_wf(flt_dict:dict):
 
 def stack_wf(wfs:pd.core.series.Series):
     stacked_wf_dict = {
-    0:np.zeros_like(wfs[0][0]),
-    1:np.zeros_like(wfs[0][0]),
-    2:np.zeros_like(wfs[0][0])
+    0:np.zeros_like(wfs.iloc[0][0]),
+    1:np.zeros_like(wfs.iloc[0][0]),
+    2:np.zeros_like(wfs.iloc[0][0])
     }
     for ch_id in range(3):
         for event_id in range(wfs.shape[0]):
-            stacked_wf_dict[ch_id] += wfs[event_id][ch_id]
+            stacked_wf_dict[ch_id] += wfs.iloc[event_id][ch_id]
     # pickle_dict(stacked_wf_dict, 'stacked_wf_dict')
     return stacked_wf_dict
 
@@ -434,8 +438,9 @@ def calculate_time_constant():
 
 ## ----------------------------------------- program -----------------------------------------
 
-print(f'\n' + 'Analysis started...')
-print(f'processing {filename}...')
+print(f'\n Analysis started...')
+print(f'\n processing {filename}...')
+print(f'\n total number of events = {wfs.shape[0]}...')
 ch_id = 0
 
 pretrigger_sum = {
@@ -453,10 +458,10 @@ com_dict = {0: [],
             }
 
 for event_x in range(wfs.shape[0]):
-    pretrigger_sum[1].append( np.sum(wfs[event_x][1][:350]) )
-    pretrigger_sum[2].append( np.sum(wfs[event_x][2][:350]) )
-    pretrigger_sum[0].append( np.sum(wfs[event_x][0][:350]) )
-    wf_sum = np.sum(wfs[event_x], axis=1)
+    pretrigger_sum[1].append( np.sum(wfs.iloc[event_x][1][:350]) )
+    pretrigger_sum[2].append( np.sum(wfs.iloc[event_x][2][:350]) )
+    pretrigger_sum[0].append( np.sum(wfs.iloc[event_x][0][:350]) )
+    wf_sum = np.sum(wfs.iloc[event_x], axis=1)
     for ch_x in range(3):
         wf_sum_dict[ch_x].append( wf_sum[ch_x] )
         
@@ -572,8 +577,7 @@ save_plot(fig_3, 'hist_COM_post_cut')
 plt.close(fig_3)
 ## ----------------------------------------- Time Constant -----------------------------------------
 
-# sys.exit() #debug
-# fit_param_dict, red_chisqr_dict = calculate_time_constant()
+fit_param_dict, red_chisqr_dict = calculate_time_constant()
 
 ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
 hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts()
