@@ -349,20 +349,22 @@ def calculate_time_constant():
         f_xrange = 4*f1_range
         bounds_input = ([1.0E3, 0E0, 1.0E03, 0E0], [1.0E9, 1.0E6, 1.0E9, 1.0E4]) # f1_func
         p0_input = [10000, 3000, 5000, 100] # f1_func
-        fitted_parameters, _pcov = curve_fit(given_func,
+        fitted_parameters, pcov = curve_fit(given_func,
                                 f_xrange[fit_begin:fit_end], wf_ch_data[f1_range][fit_begin:fit_end], \
                                 p0 = p0_input,
                                 bounds = bounds_input,
                                 )
-        return fitted_parameters
+        return fitted_parameters, pcov
 
     def fit_all_channels(data_name:str, wf_data: np.ndarray):
         (fit_begin, fit_end) = (50, 750)
         fit_param_dict= {0:0, 1:0, 2:0}
+        fit_std_dict = {0:0, 1:0, 2:0}
         red_chisqr_dict = {0:0, 1:0, 2:0}
         statbox_ls = []
         statbox_ls_0 = [] # _0 for unshifted waveform
         fit_param_dict_0= {0:0, 1:0, 2:0}
+        fit_std_dict_0 = {0:0, 1:0, 2:0}
         red_chisqr_dict_0 = {0:0, 1:0, 2:0}
 
         fig_8, ax_8 = plt.subplots(2,1, figsize=(10,8), sharex=True)
@@ -377,8 +379,9 @@ def calculate_time_constant():
             # def f0_func(x, a0, a2, a3, a4):
             #     a1 = wf_peak_ch# debug
             #     return (a0/a2)*np.exp(-(x-a1)/a2) + (a3/a4)*np.exp(-(x-a1)/a4)
-            # fit_param_dict_0[ch_id] = fit_stack(f0_func, wf_ch_data, 
+            # fit_param_dict_0[ch_id], pcov = fit_stack(f0_func, wf_ch_data, 
             #                                     (fit_begin+wf_peak_ch, fit_end+wf_peak_ch), f1_range)
+            # fit_std_dict_0[ch_id] = np.sqrt(np.diag(pcov))
             # ax_8[0].plot(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
             #              f0_func(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
             #                   *fit_param_dict_0[ch_id]), linewidth=2.5, label=f'fit {ch_id}')
@@ -391,7 +394,8 @@ def calculate_time_constant():
             f1_range = np.arange(shifted_wf_ch_data.shape[0])
             f_xrange = 4*f1_range
             ax_8[1].plot(f_xrange, shifted_wf_ch_data, color = f'C{ch_id}', label = f'{ch_id}')
-            fit_param_dict[ch_id] = fit_stack(f1_func, shifted_wf_ch_data, (fit_begin, fit_end), f1_range)
+            fit_param_dict[ch_id], pcov = fit_stack(f1_func, shifted_wf_ch_data, (fit_begin, fit_end), f1_range)
+            fit_std_dict[ch_id] = np.sqrt(np.diag(pcov))
             ax_8[1].plot(f_xrange[fit_begin:fit_end], f1_func(f_xrange[fit_begin:fit_end], 
             *fit_param_dict[ch_id]), linewidth=2.5, color=f'C{ch_id+3}', label=f'fit {ch_id}')
             red_chisqr_dict[ch_id] = red_chisq(shifted_wf_ch_data[f1_range][fit_begin:fit_end], 
@@ -422,11 +426,13 @@ def calculate_time_constant():
         for ch_id in range(3):
             print(f'red. chisqr {ch_id}:{red_chisqr_dict[ch_id]}')
             print(f'fit param {ch_id}:{fit_param_dict[ch_id]}')
+            print(f'std deviation for the fitted parameters for {ch_id}: {fit_std_dict[ch_id]}')
         if statbox_ls_0:
             print(f'\n Results using Unshifted waveform:')
             for ch_id in range(3):
                 print(f'red. chisqr {ch_id}:{red_chisqr_dict_0[ch_id]}')
                 print(f'fit param {ch_id}:{fit_param_dict_0[ch_id]}')
+                print(f'std deviation for the fitted parameters for {ch_id}: {fit_std_dict_0[ch_id]}')
         return fit_param_dict, red_chisqr_dict
     stacked_flt_wf_dict = stack_flt_wf(flt_dict)
     # stacked_flt_wf_dict = pickle.load(open('../output/00126_part_output/stacked_flt_wf_dict.pkl', 'rb')) #debug
