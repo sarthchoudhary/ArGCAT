@@ -15,7 +15,7 @@ def create_event_catalogue(dir_name:str, filename:str, output_dir:str) -> None:
 
     file_path = path.join(dir_name, filename)
     file_basename = filename.split(sep='.')[0]
-    outfile = 'temPyR00156'
+    outfile = 'temPyR00131'
     # confile = 'argset.ini'
     confile = 'argset_custom.ini'
     cmdline_args = f'--config {confile} -o {outfile} -i {file_path}'
@@ -25,6 +25,7 @@ def create_event_catalogue(dir_name:str, filename:str, output_dir:str) -> None:
 
     event_counter_ls = []
     wf_ls = []
+    baseline_ls = []
     # wf_stack_ch0 = []
     # wf_stack_ch1 = []
     # wf_stack_ch2 = []
@@ -37,6 +38,7 @@ def create_event_catalogue(dir_name:str, filename:str, output_dir:str) -> None:
             # event_index_ls.append(event_index)
             event_counter_ls.append(event.event_counter)
             wf_ls.append(event.adc_data - np.vstack(event.adc_baseline))
+            # baseline_ls.append(event.adc_baseline)
             # event_ch0, event_ch1, event_ch2 = event.adc_data - np.vstack(event.adc_baseline)
             # wf_stack_ch0.append(event_ch0)
             # wf_stack_ch1.append(event_ch1)
@@ -52,6 +54,7 @@ def create_event_catalogue(dir_name:str, filename:str, output_dir:str) -> None:
             # 'event_index': event_index_ls,
             'event_counter': event_counter_ls,
             'wf': wf_ls,
+            # 'baseline': baseline_ls,
             # 'wf_ch0': wf_stack_ch0,
             # 'wf_ch1': wf_stack_ch1,
             # 'wf_ch2': wf_stack_ch2,
@@ -83,7 +86,8 @@ def main() -> None:
     # files_ls = ['run00110.mid.lz4', 'run00129.mid.lz4', 'run00130.mid.lz4']
     # files_ls = ['run00124.mid.lz4',] 
     # files_ls = ['run00126.mid.lz4']
-    file_path_ls = glob.glob(f"/work/sarthak/argset/data/{'run00154*.mid.lz4'}")
+    # files_ls = ['run00131.mid.lz4', 'run00132.mid.lz4']
+    file_path_ls = glob.glob(f"/work/sarthak/argset/data/{'run00162*.mid.lz4'}")
     stripper_function = lambda str1: str1.split('/')[-1]
     files_ls = list(map(stripper_function, file_path_ls))
     for filename in files_ls:
