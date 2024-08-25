@@ -26,14 +26,19 @@ rc('legend', fontsize=14)
 np.set_printoptions(formatter={'float': lambda x: f"{x:10.4g}"})
 
 ## ----------------------------------------- loading data -----------------------------------------
-output_dir = '/home/sarthak/my_projects/argset/output'
+# output_dir = '/home/sarthak/my_projects/argset/output'
+output_dir = '/work/chuck/sarthak/argset/output_folder/analysis/'
 data_dir = '/work/chuck/sarthak/argset/event_catalogues'
 
 # filename = 'event_catalogue_run00126.pkl'
 # filename = 'event_catalogue_run00126_part.pkl'
-filename = 'event_catalogue_run00152_00.pkl'
+# filename = 'event_catalogue_run00152_00.pkl'
 # filename = 'event_catalogue_run00152_01.pkl'
 # filename = 'event_catalogue_run00159_00.pkl'
+# filename = 'event_catalogue_run00156_truncated.pkl'
+# filename = 'event_catalogue_run00126_truncated.pkl'
+# filename = 'event_catalogue_run00159_truncated.pkl'
+filename = 'event_catalogue_run00162_truncated.pkl'
 ## some object to quicky switch between hist features for PEN and TPB runs
 file_basename = filename.split(sep='_run')[-1].split(sep='.')[0]
 output_subdir = path.join(output_dir, f'{file_basename}_output')
@@ -128,7 +133,11 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
     
     hist_content, hist_edges, histObjects = hist_features[ch_x]
     com_peak = np.argmax(hist_content)
-    x_range = np.arange(com_peak -18, com_peak +20) # dynamic works for 152
+    x_range = np.arange(com_peak - 25, com_peak + 30) # 00159_truncated
+    # x_range = np.arange(com_peak - 15, com_peak + 17) # 00126_truncated
+    # x_range = np.arange(com_peak -7, com_peak + 9) # 00126_truncated didn't work
+    # x_range = np.arange(com_peak -16, com_peak + 20) # 00156_truncated
+    # x_range = np.arange(com_peak -18, com_peak +20) # dynamic works for 152
     # x_range = np.arange(239, 268) #run00126_part
     # x_range = np.arange(235, 270)
     # x_range = np.arange(220, 281)
@@ -156,14 +165,15 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
     print('\n')
     return fitted_parameters[0], fitted_parameters[1]
 
-def histogram_wf_sum_ch(ch_id):
+def histogram_wf_sum_ch(wf_sum_dict, ch_id):
     hist_plot_range = (-2.5e6, 0.5e7)
     fig_2, ax_2 = plt.subplots( 1, 1, figsize=(10, 8), sharex=True, sharey = False)
-    bin_content_0, bin_edges, _PlotsObjects = ax_2.hist(wf_sum_dict[ch_id], bins=10000, range=hist_plot_range, label = f'{ch_id}: full wf sum')
+    bin_content, bin_edges, _PlotsObjects = ax_2.hist(wf_sum_dict[ch_id], bins=10000, range=hist_plot_range, label = f'{ch_id}: full wf sum')
     # np.save(path.join(output_subdir, 'wf_sum_0_content.npy'), bin_content_0)
     # np.save(path.join(output_subdir, 'wf_sum_0_edges.npy'), bin_edges)
-    save_plot(fig_2, f'hist_full_wf_sum_{ch_id}')
+    # save_plot(fig_2, f'hist_full_wf_sum_{ch_id}')
     plt.close(fig_2)
+    return bin_content, bin_edges
 
 def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0, 
                pulse_difference_threshold=40):
@@ -240,19 +250,21 @@ def histogram_wf_sum():
 def histogram_wf_sum_before_and_after_cuts() -> dict:
     hist_wf_sum = {0:0, 1:0, 2: 0}
     hist_wf_sum_postcut = {0:0, 1:0, 2: 0}
-    # hist_wf_sum_range = {0:(-2.5E6, 0.5E7), 1: (-1E6, 1E6), 2:(-1E6, 1E6)} #run00126
-    hist_wf_sum_range = {0:(-0.25E6, 2.75E6), 1: (-0.25E5, 0.25E6), 2:(-0.25E5, 0.5E6)} #run00152
+    hist_wf_sum_range = {0:(-2.5E6, 0.5E7), 1: (-1E6, 1E6), 2:(-1E6, 1E6)} #run00126
+    # hist_wf_sum_range = {0:(-0.25E6, 2.75E6), 1: (-0.25E5, 0.25E6), 2:(-0.25E5, 0.5E6)} #run00152 #TODO: dynamic
+    # hist_wf_sum_range = {0:(-6E3, 1.25E6), 1: (-6E3, 1E5), 2:(-6E3, 1.5E5)} #run00159_truncated
     fig_5, ax_5 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey=False)
     for ch_id in range(3):
         wf_sum_ch = pd.Series(wf_sum_dict[ch_id])
         # hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=10000, 
-        hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=5000, 
+        hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=5000,
                         range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
         ax_5[ch_id][0].set_title('waveform sum')
         ax_5[ch_id][0].legend()
         ax_5[ch_id][0].grid()
-        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, #run00126
-        hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=5000, #run00152
+        hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, #run00126
+        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=5000, #run00152
+        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=100, #run00159_truncated
                         range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
         ax_5[ch_id][1].set_title('wf sum post cut')
         ax_5[ch_id][1].legend()
@@ -267,15 +279,23 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict):
     red_chisqr_dict = {0:0, 1:0, 2:0}
     peak_loc = {0:0, 1:0, 2:0}
     x_range = {0: 0,1: 0,2: 0}
+    # distance_to_peak = {0:[15, 12], 1:[25, 20], 2:[25, 20]} # 00159_truncated
+    # distance_to_peak = {0:[1000, 1000], 1:[1000, 1200], 2:[700, 800]}
+    distance_to_peak = {0:[1000, 1000],  1:[545, 645], 2:[700, 800]} # 1:[645, 745], 2:[700, 800]} # run00126_truncated
     for ch_id in range(3): # dynamic
         peak_loc[ch_id] = np.argmax(hist_wf_sum_postcut[ch_id][0])
-        x_range[ch_id] = np.arange(peak_loc[ch_id]-600, peak_loc[ch_id] + 1000)
+        # x_range[ch_id] = np.arange(peak_loc[ch_id]-600, peak_loc[ch_id] + 1000)
+        # x_range[ch_id] = np.arange(peak_loc[ch_id]-300, peak_loc[ch_id] + 500)
+        # x_range[ch_id] = np.arange(peak_loc[ch_id]-625, peak_loc[ch_id] + 625)
+        x_range[ch_id] = np.arange(peak_loc[ch_id] - distance_to_peak[ch_id][0], 
+                                   peak_loc[ch_id] + distance_to_peak[ch_id][1]) # run00126_truncated
     # x_range = {0: np.arange(2912, 3560), 1: np.arange(2800, 3534), 2: np.arange(2003, 2803)}  # PEN run00152
     # x_range = {0: np.arange(5332, 7999), 1: np.arange(5549, 6149), # TPB run00126
     #            2: np.arange(5900, 7400)} # (6169, 7250) (6219, 7199) (6149, 6899)
+    # x_range = {0: np.arange(2912, 3560), 1: np.arange(2800, 3534), 2: np.arange(2003, 2803)} #PEN run00156_truncated
     p0_input = {0: [2.5E6, 1E6, 100], 1: [0.18E6, 0.12E6, 100], 2: [0.32E6, 0.18E6, 100]}
 
-    fig_7, ax_7 = plt.subplots(3, 1, figsize=(18, 16))
+    fig_7, ax_7 = plt.subplots(3, 1, figsize=(10, 8)) #(18, 16))
     for ch_id in range(3):
         hist_content, hist_edges, _histObjects = hist_wf_sum_postcut[ch_id]
         del _histObjects
@@ -339,6 +359,7 @@ def stack_wf(wfs:pd.core.series.Series):
 def calculate_time_constant():
     print('\n calculating time constant..')
     def f1_func(x: np.ndarray, a0: float, a2: float, a3: float, a4: float) -> np.ndarray:
+        # return (a0/a2)*np.exp(-(x)/a2) + (a3/a4)*np.exp(-(x)/a4)
        return (a0)*np.exp(-(x)/a2) + (a3)*np.exp(-(x)/a4)
     # def f0_func(x, a0, a1, a2, a3, a4):
     #     # a1 = 424
@@ -477,8 +498,6 @@ for event_x in range(wfs.shape[0]):
     com_dict[2].append(com_arr[2])
 del com_arr
 
-# histogram_wf_sum() # not in use
-
 flt_dict = create_flt_wfs(wfs) # pass it to pulse_difference
 
 # hist_pulse_difference()
@@ -509,7 +528,8 @@ fig_1, ax_1 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = True)
 
 print(f'\n fitting COM distribution peak..')
 for ch_x in range(3):
-    hist_features[ch_x] = ( ax_1[ch_x].hist(com_dict[ch_x], bins=np.arange(-5_000, 5_000, 25), 
+    # hist_features[ch_x] = ( ax_1[ch_x].hist(com_dict[ch_x], bins=np.arange(-5_000, 5_000, 25),
+    hist_features[ch_x] = ( ax_1[ch_x].hist(com_dict[ch_x], bins=np.arange(-500, 2500, 10),  # run00126_truncated
                             color=f'C{ch_x}', label = f'{ch_x}')
                             )
     ax_1[ch_x].legend()
@@ -542,8 +562,9 @@ event_FailList_3rdCut= []
 
 apply_cuts(wfs)
 
-# hist_plot_range = (0e6, 5e6) #run00126
-hist_plot_range = (0e6, 2.5e6) #run00152
+hist_plot_range = (0e6, 5e6) #run00126
+# hist_plot_range = (0e6, 2.5e6) #run00152, run00126_truncated
+# hist_plot_range = (0e6, 1.0e6) #run00156_truncated, 159_truncated
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
 bin_content_0, bin_edges, _PlotsObjects = ax_2[0].hist(wf_sum_dict[0], bins=500, range = hist_plot_range, label = 'No cut [Channel 0]')
 bin_content_1, bin_edges, _PlotsObjects = ax_2[1].hist(wf_sum_post_cut_dict[1], bins=bin_edges, range = hist_plot_range, label = '1st cut [Channel 0]')
@@ -573,7 +594,8 @@ del bin_content_1, bin_content_2, bin_content_3, bin_edges, _PlotsObjects
 
 fig_3, ax_3 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = True)
 for ch_id in range(3):
-    ax_3[ch_id].hist(com_post_cut_dict[ch_id], bins=np.arange(-5_000, 5_000, 25), 
+    # ax_3[ch_id].hist(com_post_cut_dict[ch_id], bins=np.arange(-5_000, 5_000, 25), 
+    ax_3[ch_id].hist(com_post_cut_dict[ch_id], bins=np.arange(-500, 2500, 10), # run00126_truncated
                         color=f'C{ch_id}', label = f'{ch_id}')    
     ax_3[ch_id].legend()
     ax_3[ch_id].grid()
@@ -587,8 +609,7 @@ fit_param_dict, red_chisqr_dict = calculate_time_constant()
 
 ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
 hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts()
-# hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
+## hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
 fit_charge_distribution(hist_wf_sum_postcut)
-
 
 print(f'Execution time: {perf_counter() - t0}')
