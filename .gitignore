@@ -10,3 +10,5 @@
 /scripts/*.log
 /scripts/*.root
 /temp_folder
+/output
+/cut_output
