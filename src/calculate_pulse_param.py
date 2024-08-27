@@ -69,7 +69,8 @@ def find_clean_wfs( pyreco_manager, catalogue_filename:str, \
                 event_dict = {
                     'event_counter': event_index+1,
                     wf_str_ls[ch]: og_wf[ch],
-                    filtered_wf_str_ls[ch]: mas[ch],
+                    # filtered_wf_str_ls[ch]: mas[ch],
+                    filtered_wf_str_ls[ch]: flt[ch],
                     peak_str_ls[ch]: np.ceil(np.mean(np.where(flt_above_3rms[ch] != 0))),
                     # I prefer to take ceiling value over floor
                 }
