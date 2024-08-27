@@ -12,4 +12,4 @@
 
 
 # python /home/sarthak/my_projects/argset/create_event_catalogue.py
-python /home/sarthak/my_projects/argset/calculate_wf_param.py
+python /home/sarthak/my_projects/argset/src/calculate_pulse_param.py
