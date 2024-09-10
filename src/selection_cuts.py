@@ -36,9 +36,9 @@ data_dir = '/work/chuck/sarthak/argset/event_catalogues'
 # filename = 'event_catalogue_run00152_01.pkl'
 # filename = 'event_catalogue_run00159_00.pkl'
 # filename = 'event_catalogue_run00156_truncated.pkl'
-# filename = 'event_catalogue_run00126_truncated.pkl'
+filename = 'event_catalogue_run00126_truncated.pkl'
 # filename = 'event_catalogue_run00159_truncated.pkl'
-filename = 'event_catalogue_run00162_truncated.pkl'
+# filename = 'event_catalogue_run00162_truncated.pkl'
 ## some object to quicky switch between hist features for PEN and TPB runs
 file_basename = filename.split(sep='_run')[-1].split(sep='.')[0]
 output_subdir = path.join(output_dir, f'{file_basename}_output')
@@ -344,6 +344,17 @@ def stack_flt_wf(flt_dict:dict):
     # pickle_dict(stacked_flt_wf_dict, 'stacked_flt_wf_dict')
     return stacked_flt_wf_dict
 
+def create_part_stack_flt_wf(flt_dict:dict, term_points: list):
+    part_stacked_flt_wf_dict= {
+    0:np.zeros_like(wfs.iloc[0][0]),
+    1:np.zeros_like(wfs.iloc[0][0]),
+    2:np.zeros_like(wfs.iloc[0][0]),
+    }
+    for ch_id in range(3):
+        for event_id in event_PassList[term_points[0] : term_points[1]]:
+            part_stacked_flt_wf_dict[ch_id] += flt_dict[ch_id][event_id]
+    return part_stacked_flt_wf_dict
+
 def stack_wf(wfs:pd.core.series.Series):
     stacked_wf_dict = {
     0:np.zeros_like(wfs.iloc[0][0]),
@@ -382,6 +393,7 @@ def calculate_time_constant():
         fit_param_dict= {0:0, 1:0, 2:0}
         fit_std_dict = {0:0, 1:0, 2:0}
         red_chisqr_dict = {0:0, 1:0, 2:0}
+        fitresult_ls = []
         statbox_ls = []
         statbox_ls_0 = [] # _0 for unshifted waveform
         fit_param_dict_0= {0:0, 1:0, 2:0}
@@ -423,9 +435,11 @@ def calculate_time_constant():
                                         f1_func(f_xrange[fit_begin:fit_end], *fit_param_dict[ch_id]), 
                                         fit_param_dict[ch_id])
             statbox_ls.append(f'{ch_id} red. chisqr = {red_chisqr_dict[ch_id]:.2f}')
+            fitresult_ls.append(f'{ch_id} long time constant = {fit_param_dict[ch_id][1]:.1f} | short time constant = {fit_param_dict[ch_id][3]:.1f}')
         # text_in_box_0 = AnchoredText('\n'.join(statbox_ls_0), loc='upper center') #debug
         # ax_8[0].add_artist(text_in_box_0) #debug
         text_in_box = AnchoredText('\n'.join(statbox_ls), loc='upper center')
+        fit_result_in_box = AnchoredText('\n'.join(fitresult_ls), loc='upper center')
         ax_8[0].legend()
         ax_8[0].set_title(f'stacked {data_name}') # =filtered wf
         ax_8[0].set_yscale('log')
@@ -435,15 +449,18 @@ def calculate_time_constant():
         ax_8[1].set_yscale('log')
         ax_8[1].grid()
         ax_8[1].add_artist(text_in_box)
+        ax_8[1].add_artist(fit_result_in_box)
         ax_8[1].axvline(x=f_xrange[fit_begin], color='grey', linestyle='--')
         ax_8[1].axvline(x=f_xrange[fit_end], color='grey', linestyle='--')
         ax_8[1].legend()
-        if 'Filtered' in data_name:
+        if 'Filtered wf' in data_name:
             save_plot(fig_8, 'stacked_flt_wf')
-        else:
+        elif 'Stacked wf' in data_name:
             save_plot(fig_8, 'stacked_wf') 
-
+        elif 'wf part' in data_name:
+            save_plot(fig_8, f"wf_{data_name.split(sep = ' ')[-1]}")
         print(f'\n Results using {data_name}:')
+
         for ch_id in range(3):
             print(f'red. chisqr {ch_id}:{red_chisqr_dict[ch_id]}')
             print(f'fit param {ch_id}:{fit_param_dict[ch_id]}')
@@ -461,6 +478,15 @@ def calculate_time_constant():
     # stacked_wf_dict = pickle.load(open('../output/00126_part_output/stacked_wf_dict.pkl', 'rb')) #debug
     fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked Filtered wf', stacked_flt_wf_dict)
     fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked wf', stacked_wf_dict)
+
+    ## --- create parts: instead of one stack we get n stacks. ----
+    number_of_parts = 6 # number of parts
+    break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
+    for part_id in range(number_of_parts):
+        # print('start end event_PassList:', break_indices[part_id], break_indices[part_id + 1])     # debug
+        part_stacked_flt_wf = create_part_stack_flt_wf(flt_dict, [int(break_indices[part_id]), int(break_indices[part_id + 1])])
+        part_fit_param_dict, part_red_chisqr_dict = fit_all_channels(f'Stacked Flt wf part_{part_id}', part_stacked_flt_wf)
+    
     return fit_param_dict, red_chisqr_dict #TODO: write to csv.
 
 ## ----------------------------------------- program -----------------------------------------
@@ -607,9 +633,9 @@ plt.close(fig_3)
 
 fit_param_dict, red_chisqr_dict = calculate_time_constant()
 
-## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
-hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts()
-## hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
-fit_charge_distribution(hist_wf_sum_postcut)
+# ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
+# hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts()
+# ## hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
+# fit_charge_distribution(hist_wf_sum_postcut)
 
 print(f'Execution time: {perf_counter() - t0}')
