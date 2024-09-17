@@ -14,6 +14,7 @@
 # python /home/sarthak/my_projects/argset/src/create_event_catalogue.py
 # python /home/sarthak/my_projects/argset/src/calculate_wf_param.py
 # python /home/sarthak/my_projects/argset/src/cut_eff_comparison.py
-python /home/sarthak/my_projects/argset/src/selection_cuts.py
+# python /home/sarthak/my_projects/argset/src/selection_cuts.py 
+python /home/sarthak/my_projects/argset/src/selection_cuts.py -f event_catalogue_run00162_truncated.pkl
 # python /home/sarthak/my_projects/argset/src/truncate_wfs.py
 # python /home/sarthak/my_projects/argset/src/hist2d_eventID_sum.py
