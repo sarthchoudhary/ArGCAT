@@ -45,9 +45,10 @@ def find_clean_wfs( pyreco_manager, catalogue_filename:str, \
 
     wf_str_ls = ['wf_ch0', 'wf_ch1', 'wf_ch2']
     peak_str_ls = ['peak_ch0', 'peak_ch1', 'peak_ch2']
-    event_df_ch0 = pd.DataFrame( columns = ['event_counter', 'wf_ch0', 'peak_ch0'])
-    event_df_ch1 = pd.DataFrame( columns = ['event_counter', 'wf_ch1', 'peak_ch1'])
-    event_df_ch2 = pd.DataFrame( columns = ['event_counter', 'wf_ch2', 'peak_ch2'])
+    filtered_wf_str_ls = ['filtered_wf_ch0', 'filtered_wf_ch1', 'filtered_wf_ch2']
+    event_df_ch0 = pd.DataFrame( columns = ['event_counter', 'wf_ch0', 'filtered_wf_ch0', 'peak_ch0'])
+    event_df_ch1 = pd.DataFrame( columns = ['event_counter', 'wf_ch1', 'filtered_wf_ch1', 'peak_ch1'])
+    event_df_ch2 = pd.DataFrame( columns = ['event_counter', 'wf_ch2', 'filtered_wf_ch2', 'peak_ch2'])
     # event_df_ls = [event_df_ch0, event_df_ch1, event_df_ch2] #TODO: future
     print(colored(f"Finding clean waveforms", 'green', attrs = ['blink', 'bold']) )
 
@@ -68,6 +69,8 @@ def find_clean_wfs( pyreco_manager, catalogue_filename:str, \
                 event_dict = {
                     'event_counter': event_index+1,
                     wf_str_ls[ch]: og_wf[ch],
+                    # filtered_wf_str_ls[ch]: mas[ch],
+                    filtered_wf_str_ls[ch]: flt[ch],
                     peak_str_ls[ch]: np.ceil(np.mean(np.where(flt_above_3rms[ch] != 0))),
                     # I prefer to take ceiling value over floor
                 }
@@ -90,7 +93,7 @@ def find_clean_wfs( pyreco_manager, catalogue_filename:str, \
     ## TODO: compression for pickle files. https://stackoverflow.com/questions/57983431/whats-the-most-space-efficient-way-to-compress-serialized-python-data
     
     try:
-        output_filename = f"clean_catalogue_custom_{file_basename}.pkl"
+        output_filename = f"clean_catalogue_filteredWF_{file_basename}.pkl"
         clean_dict_path = path.join(output_folder, output_filename)
         with open(clean_dict_path, 'wb') as clean_dict_file:
             pickle.dump(clean_catalogue_dict, clean_dict_file, pickle.HIGHEST_PROTOCOL)
@@ -133,9 +136,11 @@ def fit_template(clean_catalogue:pd.DataFrame, n_channel:int) -> pd.DataFrame:
     '''
     ch_ls = ['ch0', 'ch1', 'ch2']
     wf_str_ls = ['wf_ch0', 'wf_ch1', 'wf_ch2']
+    filtered_wf_str_ls = ['filtered_wf_ch0', 'filtered_wf_ch1', 'filtered_wf_ch2']
     peak_str_ls = ['peak_ch0', 'peak_ch1', 'peak_ch2']
     ch_str = ch_ls[n_channel]
     wf_ch = wf_str_ls[n_channel]
+    filtered_wf_ch = filtered_wf_str_ls[n_channel]
     peak_ch = peak_str_ls[n_channel]
     fit_begin = 0
     fit_catalogue = pd.DataFrame()
@@ -143,6 +148,7 @@ def fit_template(clean_catalogue:pd.DataFrame, n_channel:int) -> pd.DataFrame:
     
     for clean_index in trange(clean_catalogue.shape[0], colour='blue'): #Optional: we can do split processing on file
         wf = clean_catalogue.iloc[clean_index][wf_ch] # channel specific
+        filteredd_wf = clean_catalogue.iloc[clean_index][filtered_wf_ch]
         wf, wf_min = transform_shift_wf(wf)
         peak_loc = clean_catalogue.iloc[clean_index][peak_ch]
         fit_end = wf.shape[0] # type: ignore
@@ -170,6 +176,7 @@ def fit_template(clean_catalogue:pd.DataFrame, n_channel:int) -> pd.DataFrame:
                                             'event_counter': clean_catalogue.iloc[clean_index]['event_counter'],
                                             wf_ch : wf,
                                             'wf_raw': wf + wf_min,
+                                            filtered_wf_ch: filteredd_wf,
                                             'fit_param': fittedparameters,
                                             'chisqr': red_chisqr_value,
                                             }, ignore_index=True) # type: ignore
@@ -203,7 +210,7 @@ def fit_all_channels(clean_catalogue_dict: dict, file_config: dict, name_dict: d
     if not path.isdir(output_folder):
         os.mkdir(output_folder)
     try:
-        output_filename = f"fit_catalogue_custom_{file_basename}.pkl"
+        output_filename = f"fit_catalogue_filteredWF_{file_basename}.pkl"
         fit_dict_path = path.join(output_folder, output_filename)
         with open(fit_dict_path, 'wb') as fit_dict_file:
             pickle.dump(fit_catalogue_dict, fit_dict_file, pickle.HIGHEST_PROTOCOL)
@@ -285,8 +292,8 @@ def main(file_config: dict, ch_number_ls:list[int], plots_target:int, save_plots
     get_dataname = lambda filename: path.join(midas_data_folder, f'{filename}.mid.lz4')
     file_config['midas_data_filename'] = list(map(get_dataname, file_config['file_basename']))
 
-    # confile = 'argset.ini'
-    confile = 'argset_custom.ini'
+    confile = 'argset.ini'
+    # confile = 'argset_custom.ini'
 
     for file_index, event_catalogue_filename in enumerate(file_config['run_catalogue']):
         name_dict = {}
@@ -309,7 +316,7 @@ def main(file_config: dict, ch_number_ls:list[int], plots_target:int, save_plots
 
 if __name__ == "__main__":
 
-    analysis_config_file = '/home/sarthak/my_projects/argset/argset_analysis_config.yaml'
+    analysis_config_file = '/home/sarthak/my_projects/argset/src/argset_analysis_config.yaml'
 
     with open(analysis_config_file) as handle:
         try:
@@ -318,5 +325,5 @@ if __name__ == "__main__":
             print(exc)    
     
     # main(file_config, ch_number_ls = [0, 1, 2], plots_target=1)
-    # main(file_config, ch_number_ls = [0], plots_target=40) # diag
-    main(file_config, ch_number_ls = [0, 1, 2], plots_target=10)
+    main(file_config, ch_number_ls = [0], plots_target=10) # diag
+    # main(file_config, ch_number_ls = [0, 1, 2], plots_target=10)

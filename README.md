@@ -39,6 +39,7 @@ There are several tools available for data processing:
         1. run the calculate_pulse_param.py script again
         1. process the fit_catalogue with histogram_pulse_param.ipynb. Fine tune the fitter and find the optimum value of pulse parameters.
         1. verify that parameters found in previous step are similar to parameters in step 3.
+- notebooks/histogram_pulse_param.ipynb contains the code for making fingerplot from filtered waveform.
 
 **Catalogue:**\
 The eventwise data products are catalogued in form of pandas DataFrames. I call these catalogues. The catalogue for all channels are packaged together as a python dict and written to disk as pickle file.\
