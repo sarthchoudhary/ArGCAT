@@ -16,6 +16,8 @@ from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 from os import path
 import os
+import argparse
+from pyreco.manager.manager import Manager
 
 rc('figure', autolayout=True, figsize=[16, 9], dpi=125, titlesize=20 )
 rc('font', family='monospace')
@@ -25,21 +27,36 @@ rc('legend', fontsize=14)
 
 np.set_printoptions(formatter={'float': lambda x: f"{x:10.4g}"})
 
-## ----------------------------------------- loading data -----------------------------------------
+## ----------------------------------------- directories -----------------------------------------
 # output_dir = '/home/sarthak/my_projects/argset/output'
-output_dir = '/work/chuck/sarthak/argset/output_folder/analysis/'
+output_dir = '/work/chuck/sarthak/argset/output_folder/analysis/' #TODO: move to YAML file.
 data_dir = '/work/chuck/sarthak/argset/event_catalogues'
 
-# filename = 'event_catalogue_run00126.pkl'
-# filename = 'event_catalogue_run00126_part.pkl'
-# filename = 'event_catalogue_run00152_00.pkl'
-# filename = 'event_catalogue_run00152_01.pkl'
-# filename = 'event_catalogue_run00159_00.pkl'
-filename = 'event_catalogue_run00156_truncated.pkl'
-# filename = 'event_catalogue_run00126_truncated.pkl'
-# filename = 'event_catalogue_run00159_truncated.pkl'
-# filename = 'event_catalogue_run00162_truncated.pkl'
-## some object to quicky switch between hist features for PEN and TPB runs
+## ----------------------------------------- Arguments -----------------------------------------
+def argument_collector() ->argparse.Namespace:
+    argParser = argparse.ArgumentParser()
+    argParser.add_argument("-f", "--filename", help='name of the event catalogue file')
+    argParser.add_argument("-st", "--sample_type", 
+                           choices = ['PEN', 'TPB'],
+                           help= "whether the Sample is TPB or PEN")
+    args = argParser.parse_args()
+    return args
+
+args = argument_collector()
+
+## ----------------------------------------- loading data -----------------------------------------
+# # filename = 'event_catalogue_run00126.pkl'
+# # filename = 'event_catalogue_run00126_part.pkl'
+# # filename = 'event_catalogue_run00152_00.pkl'
+# # filename = 'event_catalogue_run00152_01.pkl'
+# # filename = 'event_catalogue_run00159_00.pkl'
+# # filename = 'event_catalogue_run00156_truncated.pkl'
+# # filename = 'event_catalogue_run00126_truncated.pkl'
+# # filename = 'event_catalogue_run00159_truncated.pkl'
+# # filename = 'event_catalogue_run00162_truncated.pkl'
+# #TODO: some object to quicky switch between hist features for PEN and TPB runs
+
+filename = args.filename
 file_basename = filename.split(sep='_run')[-1].split(sep='.')[0]
 output_subdir = path.join(output_dir, f'{file_basename}_output')
 if not path.isdir(output_subdir):
@@ -48,10 +65,10 @@ event_catalogue_path = path.join(data_dir, filename)
 event_catalogue = pd.read_pickle(event_catalogue_path)
 wfs = event_catalogue['wf']
 del event_catalogue
-## remove first 5 hours of data for runs which started taking data while still warm
-# truncate_till = 13000
-# wfs= wfs.truncate(before=truncate_till) #TODO: comment out if not needed
-# print(f'Caution: discarding initial 13000 events!')
+# ## remove first 5 hours of data for runs which started taking data while still warm
+# # truncate_till = 13000
+# # wfs= wfs.truncate(before=truncate_till) #TODO: comment out if not needed
+# # print(f'Caution: discarding initial 13000 events!')
 
 ## ----------------------------------------- ARMA -----------------------------------------
 from pyreco.manager.manager import Manager
@@ -115,7 +132,7 @@ def pulse_difference(event_x, use_flt_wf:bool):
 
     return abs(sample_mp1 - sample_mp2)
 
-def calculate_com(event_x):
+def calculate_com(wfs, event_x):
     event_com = np.divide(np.sum(np.multiply(wfs.iloc[event_x], np.arange(wfs.iloc[event_x].shape[1])), axis=1), 
                       np.sum(wfs.iloc[event_x], axis=1)
                 )
@@ -217,7 +234,7 @@ def hist_pulse_difference():
 
 def perform_arma(og_wf):
     flt = np.reshape(mfilter.numba_fast_filter(og_wf), newshape=og_wf.shape)
-    # mas = m.algos.running_mean(flt, gate=60)
+    # mas = m.algos.running_mean(flt, gate=60) # Discussed with Marcin we AR filtered not ARMA filtered
     # return flt - mas
     return flt
 
@@ -229,7 +246,7 @@ def histogram_wf_sum():
         2: []
     }
     for event_id in range(wfs.shape[0]):
-        flt_wf_sum = np.sum(perform_arma(wfs.iloc[event_id]), axis=1)
+        flt_wf_sum = np.sum(perform_arma(output_subdir, wfs.iloc[event_id]), axis=1)
         flt_wf_sum_dict[1].append( flt_wf_sum[1] )
         flt_wf_sum_dict[2].append( flt_wf_sum[2] )
         flt_wf_sum_dict[0].append( flt_wf_sum[0] )
@@ -522,7 +539,7 @@ for event_x in range(wfs.shape[0]):
     for ch_x in range(3):
         wf_sum_dict[ch_x].append( wf_sum[ch_x] )
         
-    com_arr = calculate_com(event_x)
+    com_arr = calculate_com(wfs, event_x)
     com_dict[0].append(com_arr[0])
     com_dict[1].append(com_arr[1])
     com_dict[2].append(com_arr[2])
@@ -595,7 +612,7 @@ apply_cuts(wfs)
 hist_plot_range = (0e6, 5e6) #run00126
 # hist_plot_range = (0e6, 2.5e6) #run00152, run00126_truncated
 # hist_plot_range = (0e6, 1.0e6) #run00156_truncated, 159_truncated
-fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = True)
+fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
 bin_content_0, bin_edges, _PlotsObjects = ax_2[0].hist(wf_sum_dict[0], bins=500, range = hist_plot_range, label = 'No cut [Channel 0]')
 bin_content_1, bin_edges, _PlotsObjects = ax_2[1].hist(wf_sum_post_cut_dict[1], bins=bin_edges, range = hist_plot_range, label = '1st cut [Channel 0]')
 bin_content_2, bin_edges, _PlotsObjects  = ax_2[2].hist(wf_sum_post_cut_dict[2], bins=bin_edges, label = '2nd cut [Channel 0]')
@@ -610,11 +627,13 @@ ratio_3_2 = np.divide(bin_content_3, bin_content_2, out=np.zeros_like(bin_conten
 ax_2[4].plot(bin_edges[:-1], 1.-ratio_3_2, alpha=0.5, color='#69ebd2', label = '3rd cut')
 ratio_3_0 = np.divide(bin_content_3, bin_content_0, out=np.zeros_like(bin_content_3), where=bin_content_0!=0)
 ax_2[4].plot(bin_edges[:-1], 1.-ratio_3_0, alpha=0.5, color='#e59acf', label = 'overall')
+ax_2[4].set_ylim(0.0, 1.0)
 ax_2[4].axhline(y=0.2, linestyle='--')
 for subplot_x in range(4):
     ax_2[subplot_x].legend()
     ax_2[subplot_x].grid()
     ax_2[subplot_x].set_ylabel('counts')
+    ax_2[subplot_x].set_ylim(0, 1000) #TODO: dynamic
 ax_2[4].legend()
 ax_2[4].set_ylabel('cut efficiency')
 ax_2[4].set_xlabel('Full WF sum')
@@ -646,7 +665,7 @@ number_of_parts = 6
 break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
 for part_id in range(number_of_parts):
     part_hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList[int(break_indices[part_id]) : int(break_indices[part_id + 1])], 
-                                                                      part_id = f'_part_{part_id}')
+                                                                        part_id = f'_part_{part_id}')
     fit_charge_distribution(part_hist_wf_sum_postcut, part_id = f'_part_{part_id}')
 
 print(f'Execution time: {perf_counter() - t0}')
