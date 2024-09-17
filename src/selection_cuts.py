@@ -35,8 +35,8 @@ data_dir = '/work/chuck/sarthak/argset/event_catalogues'
 # filename = 'event_catalogue_run00152_00.pkl'
 # filename = 'event_catalogue_run00152_01.pkl'
 # filename = 'event_catalogue_run00159_00.pkl'
-# filename = 'event_catalogue_run00156_truncated.pkl'
-filename = 'event_catalogue_run00126_truncated.pkl'
+filename = 'event_catalogue_run00156_truncated.pkl'
+# filename = 'event_catalogue_run00126_truncated.pkl'
 # filename = 'event_catalogue_run00159_truncated.pkl'
 # filename = 'event_catalogue_run00162_truncated.pkl'
 ## some object to quicky switch between hist features for PEN and TPB runs
@@ -247,7 +247,7 @@ def histogram_wf_sum():
     save_plot(fig_4, 'hist_flt_wf')
     plt.close(fig_4)
 
-def histogram_wf_sum_before_and_after_cuts() -> dict:
+def histogram_wf_sum_before_and_after_cuts(part_event_PassList: list, part_id:str='') -> dict:
     hist_wf_sum = {0:0, 1:0, 2: 0}
     hist_wf_sum_postcut = {0:0, 1:0, 2: 0}
     hist_wf_sum_range = {0:(-2.5E6, 0.5E7), 1: (-1E6, 1E6), 2:(-1E6, 1E6)} #run00126
@@ -259,21 +259,22 @@ def histogram_wf_sum_before_and_after_cuts() -> dict:
         # hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=10000, 
         hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=5000,
                         range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
-        ax_5[ch_id][0].set_title('waveform sum')
+        ax_5[ch_id][0].set_title(f'waveform sum {part_id}')
         ax_5[ch_id][0].legend()
         ax_5[ch_id][0].grid()
-        hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, #run00126
+        hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[part_event_PassList], bins=10000, #run00126
+        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, #run00126
         # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=5000, #run00152
         # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=100, #run00159_truncated
                         range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
-        ax_5[ch_id][1].set_title('wf sum post cut')
+        ax_5[ch_id][1].set_title(f'wf sum post cut {part_id}')
         ax_5[ch_id][1].legend()
         ax_5[ch_id][1].grid()
-    save_plot(fig_5, 'histogram_wf_sum_before_and_after_cuts')
-    pickle_dict( hist_wf_sum_postcut, 'hist_wf_sum_postcut')
+    save_plot(fig_5, f'histogram_wf_sum_before_and_after_cuts{part_id}')
+    pickle_dict( hist_wf_sum_postcut, f'hist_wf_sum_postcut{part_id}')
     return hist_wf_sum_postcut
 
-def fit_charge_distribution(hist_wf_sum_postcut: dict):
+def fit_charge_distribution(hist_wf_sum_postcut: dict, part_id:str = ''):
     fit_param_dict = {0:0, 1:0, 2:0}
     fit_std_dict = {0:0, 1:0, 2:0}
     red_chisqr_dict = {0:0, 1:0, 2:0}
@@ -321,14 +322,17 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict):
         ax_7[ch_id].grid()
         # ax_7[ch_id].set_title('Fit to distribution of full wf sum')
         ax_7[ch_id].legend()
-    fig_7.suptitle('Fit to distribution of full wf sum')
-    save_plot(fig_7, 'charge_distribution_fit')
-    print('\n fit to charge distributions post cuts:')
+    peak_asymmetry = (fit_param_dict[1][0] - fit_param_dict[2][0])/(fit_param_dict[1][0] + fit_param_dict[2][0])
+    ax_7[0].add_artist(AnchoredText(f"Asymmetry = {peak_asymmetry:.3f}", loc = 'center left'))
+    fig_7.suptitle(f'Fit to distribution of full wf sum{part_id}')
+    save_plot(fig_7, f'charge_distribution_fit{part_id}')
+    print(f'\n fit to charge distributions post cuts {part_id}:')
     # print('\n')
     for ch_id in range(3):
         print(f'red. chisqr for {ch_id}: {red_chisqr_dict[ch_id]}')
         print(f'fitted parameters for {ch_id}: {fit_param_dict[ch_id]}')
         print(f'std deviation for the fitted parameters for {ch_id}: {fit_std_dict[ch_id]}')
+    print(f'Fitted charge peak Asymmetry: {peak_asymmetry}')
     return fit_param_dict
 
 def stack_flt_wf(flt_dict:dict):
@@ -480,7 +484,7 @@ def calculate_time_constant():
     fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked wf', stacked_wf_dict)
 
     ## --- create parts: instead of one stack we get n stacks. ----
-    number_of_parts = 6 # number of parts
+    number_of_parts = 6
     break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
     for part_id in range(number_of_parts):
         # print('start end event_PassList:', break_indices[part_id], break_indices[part_id + 1])     # debug
@@ -591,7 +595,7 @@ apply_cuts(wfs)
 hist_plot_range = (0e6, 5e6) #run00126
 # hist_plot_range = (0e6, 2.5e6) #run00152, run00126_truncated
 # hist_plot_range = (0e6, 1.0e6) #run00156_truncated, 159_truncated
-fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
+fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = True)
 bin_content_0, bin_edges, _PlotsObjects = ax_2[0].hist(wf_sum_dict[0], bins=500, range = hist_plot_range, label = 'No cut [Channel 0]')
 bin_content_1, bin_edges, _PlotsObjects = ax_2[1].hist(wf_sum_post_cut_dict[1], bins=bin_edges, range = hist_plot_range, label = '1st cut [Channel 0]')
 bin_content_2, bin_edges, _PlotsObjects  = ax_2[2].hist(wf_sum_post_cut_dict[2], bins=bin_edges, label = '2nd cut [Channel 0]')
@@ -633,9 +637,16 @@ plt.close(fig_3)
 
 fit_param_dict, red_chisqr_dict = calculate_time_constant()
 
-# ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
-# hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts()
-# ## hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
-# fit_charge_distribution(hist_wf_sum_postcut)
+## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
+hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList)
+## hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
+fit_charge_distribution(hist_wf_sum_postcut)
+## ------------------------------ PartWise: Fit Gauss to integrated Charge Distribution ----------------------
+number_of_parts = 6
+break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
+for part_id in range(number_of_parts):
+    part_hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList[int(break_indices[part_id]) : int(break_indices[part_id + 1])], 
+                                                                      part_id = f'_part_{part_id}')
+    fit_charge_distribution(part_hist_wf_sum_postcut, part_id = f'_part_{part_id}')
 
 print(f'Execution time: {perf_counter() - t0}')
