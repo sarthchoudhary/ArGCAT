@@ -3,6 +3,7 @@
 ### srun --mem=16G -A bejger-grp -p dgx --pty bash
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rc
 from matplotlib.offsetbox import AnchoredText
 from pyreco.manager.manager import Manager # TODO: Can WFfilter work w/o it?
 from pyreco.reco.filtering import WFFilter
@@ -15,6 +16,14 @@ from tqdm import trange, tqdm
 from termcolor import colored
 import pickle
 import yaml
+
+rc('figure', autolayout=True, figsize=[16, 9], dpi=125, titlesize=20 )
+rc('font', family='monospace')
+rc('axes', titlesize=20, titleweight='heavy', labelsize=16, labelweight='bold')
+rc(('xtick', 'ytick'), labelsize = 18)
+rc('legend', fontsize=14)
+
+np.set_printoptions(formatter={'float': lambda x: f"{x:10.4g}"})
 
 def find_clean_wfs( pyreco_manager, catalogue_filename:str, \
                    file_config: dict, name_dict:dict) -> dict[str, pd.DataFrame]: 
@@ -265,6 +274,7 @@ def plotter_all(fit_catalogue_dict: dict, ch_number_ls: list[int], \
                     plt.legend()
                     
                     output_filename = f"midas_{file_basename}_{ch_str}_{int(event_counter)}.pdf"
+                    # output_filename = f"midas_{file_basename}_{ch_str}_{int(event_counter)}.png"
                     output_filename = path.join(output_folder, output_filename)
                     plt.savefig(output_filename)
                     plt.close()
