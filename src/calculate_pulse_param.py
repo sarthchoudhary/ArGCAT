@@ -261,20 +261,22 @@ def plotter_all(fit_catalogue_dict: dict, ch_number_ls: list[int], \
                     wf = fit_catalogue.loc[plot_index]['wf_raw']
                     x_values = np.arange(0, wf.shape[0])
                     plt.figure(plot_index, figsize=(8,6))
-                    plt.title(f"{ch_str} data vs fit") 
-                    plt.plot(wf, '.--', color='black', \
-                                label=f'data : {ch_str}')
+                    # plt.title(f"{ch_str} data vs fit") # plots for thesis don't need title
+                    plt.plot(wf, '.--', color=f"C{ch_str[2]}", \
+                                label=f"channel {ch_str[2]}")
                     fittedparameters = fit_catalogue.loc[plot_index]['fit_param']
                     plt.plot(pulse_template(x_values, *fittedparameters), \
-                '-', color='red', label=f'template fit on {ch_str}')
-                    text_in_box = AnchoredText(f"reduced chisqr = {fit_catalogue.loc[plot_index]['chisqr']:.2f}", \
+                '-', color='#FF5733', label=f'fit')
+                    text_in_box = AnchoredText(f"$\\chi^{2}/\\nu$ = {fit_catalogue.loc[plot_index]['chisqr']:.2f}", \
                                             loc='upper left')
+                    plt.xlabel('Time bins')
+                    plt.ylabel('Amplitude [ADC units]')
                     ax = plt.gca()
                     ax.add_artist(text_in_box)
                     plt.legend()
                     
-                    output_filename = f"midas_{file_basename}_{ch_str}_{int(event_counter)}.pdf"
-                    # output_filename = f"midas_{file_basename}_{ch_str}_{int(event_counter)}.png"
+                    # output_filename = f"midas_{file_basename}_{ch_str}_{int(event_counter)}.pdf"
+                    output_filename = f"midas_{file_basename}_{ch_str}_{int(event_counter)}.png"
                     output_filename = path.join(output_folder, output_filename)
                     plt.savefig(output_filename)
                     plt.close()
@@ -334,5 +336,5 @@ if __name__ == "__main__":
             print(exc)    
     
     # main(file_config, ch_number_ls = [0, 1, 2], plots_target=1)
-    main(file_config, ch_number_ls = [0], plots_target=10) # diag
+    main(file_config, ch_number_ls = [0,1,2], plots_target=100) # diag
     # main(file_config, ch_number_ls = [0, 1, 2], plots_target=10)
