@@ -390,8 +390,9 @@ def stack_wf(wfs:pd.core.series.Series):
 
 def calculate_time_constant():
     print('\n calculating time constant..')
+
     def f1_func(x: np.ndarray, a0: float, a2: float, a3: float, a4: float) -> np.ndarray:
-        # return (a0/a2)*np.exp(-(x)/a2) + (a3/a4)*np.exp(-(x)/a4)
+    #     return (a0/a2)*np.exp(-(x)/a2) + (a3/a4)*np.exp(-(x)/a4)
        return (a0)*np.exp(-(x)/a2) + (a3)*np.exp(-(x)/a4)
     # def f0_func(x, a0, a1, a2, a3, a4):
     #     # a1 = 424
@@ -400,8 +401,10 @@ def calculate_time_constant():
                   f1_range: np.ndarray):
         (fit_begin, fit_end) = fit_range
         f_xrange = 4*f1_range
-        bounds_input = ([1.0E3, 0E0, 1.0E03, 0E0], [1.0E9, 1.0E6, 1.0E9, 1.0E4]) # f1_func
-        p0_input = [10000, 3000, 5000, 100] # f1_func
+        # bounds_input = ([1.0E3, 0E0, 1.0E03, 0E0], [1.0E9, 1.0E6, 1.0E9, 1.0E4]) # f1_func
+        # p0_input = [10000, 3000, 5000, 100] # f1_func
+        bounds_input = ([1.0E0, 0.0, 0.0, 1.0E03, 0.0], [1.0E10, 4.0E3, 1.0E6, 1.0E9, 1.0E4]) # f0_func
+        p0_input = [1.0E7, 2000, 3000, 1.0E5, 100] # f0_func
         fitted_parameters, pcov = curve_fit(given_func,
                                 f_xrange[fit_begin:fit_end], wf_ch_data[f1_range][fit_begin:fit_end], \
                                 p0 = p0_input,
@@ -410,70 +413,51 @@ def calculate_time_constant():
         return fitted_parameters, pcov
 
     def fit_all_channels(data_name:str, wf_data: np.ndarray):
-        (fit_begin, fit_end) = (50, 750)
+        # (fit_begin, fit_end) = (50, 750) #f1_func LIDINE presentation
+        (fit_begin, fit_end) = (25, 750) #f0_func
         fit_param_dict= {0:0, 1:0, 2:0}
         fit_std_dict = {0:0, 1:0, 2:0}
         red_chisqr_dict = {0:0, 1:0, 2:0}
+        statbox_ls = [] # _0 for unshifted waveform
         fitresult_ls = []
-        statbox_ls = []
-        statbox_ls_0 = [] # _0 for unshifted waveform
-        fit_param_dict_0= {0:0, 1:0, 2:0}
-        fit_std_dict_0 = {0:0, 1:0, 2:0}
-        red_chisqr_dict_0 = {0:0, 1:0, 2:0}
 
-        fig_8, ax_8 = plt.subplots(2,1, figsize=(10,8), sharex=True)
+        fig_8, ax_8 = plt.subplots(figsize=(10,6), sharex=True)
         for ch_id in range(3):
             wf_ch_data = wf_data[ch_id]
             wf_peak_ch = np.argmax(wf_ch_data)
             f1_range = np.arange(wf_ch_data.shape[0])
-            f_xrange = 4*f1_range
-            ax_8[0].plot(4*f1_range, wf_ch_data, label = f'{ch_id}')
-            # # TODO: make f0_func work for unshifted wf
-            # # RE-define f0_func here: with a1 = wf_peak_ch #debug
-            # def f0_func(x, a0, a2, a3, a4):
+            f_xrange = 4*f1_range # sampling rate 1 sample = 4 ns?
+            ax_8.plot(4*f1_range, wf_ch_data, label = f'{ch_id}')
+
+            # def f0_func(x, a0, a2, a3, a4): # fit function originally proposed by Marcin
             #     a1 = wf_peak_ch# debug
             #     return (a0/a2)*np.exp(-(x-a1)/a2) + (a3/a4)*np.exp(-(x-a1)/a4)
-            # fit_param_dict_0[ch_id], pcov = fit_stack(f0_func, wf_ch_data, 
-            #                                     (fit_begin+wf_peak_ch, fit_end+wf_peak_ch), f1_range)
-            # fit_std_dict_0[ch_id] = np.sqrt(np.diag(pcov))
-            # ax_8[0].plot(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
-            #              f0_func(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
-            #                   *fit_param_dict_0[ch_id]), linewidth=2.5, label=f'fit {ch_id}')
-            # red_chisqr_dict_0[ch_id] = red_chisq(wf_ch_data[f1_range][fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
-            #                         f0_func(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
-            #                         *fit_param_dict_0[ch_id]), fit_param_dict_0[ch_id])
-            # statbox_ls_0.append(f'{ch_id} red. chisqr = {red_chisqr_dict_0[ch_id]:.2f}')
-            
-            shifted_wf_ch_data = wf_ch_data[0+wf_peak_ch:4000+wf_peak_ch]
-            f1_range = np.arange(shifted_wf_ch_data.shape[0])
-            f_xrange = 4*f1_range
-            ax_8[1].plot(f_xrange, shifted_wf_ch_data, color = f'C{ch_id}', label = f'{ch_id}')
-            fit_param_dict[ch_id], pcov = fit_stack(f1_func, shifted_wf_ch_data, (fit_begin, fit_end), f1_range)
+            def f0_func(x: np.ndarray, a0: float, a1: float, a2: float, a3: float, a4: float) -> np.ndarray:
+               return (a0)*np.exp(-(x-a1)/a2) + (a3)*np.exp(-(x-a1)/a4)
+            fit_param_dict[ch_id], pcov = fit_stack(f0_func, wf_ch_data, 
+                                                (fit_begin+wf_peak_ch, fit_end+wf_peak_ch), f1_range)
             fit_std_dict[ch_id] = np.sqrt(np.diag(pcov))
-            ax_8[1].plot(f_xrange[fit_begin:fit_end], f1_func(f_xrange[fit_begin:fit_end], 
-            *fit_param_dict[ch_id]), linewidth=2.5, color=f'C{ch_id+3}', label=f'fit {ch_id}')
-            red_chisqr_dict[ch_id] = red_chisq(shifted_wf_ch_data[f1_range][fit_begin:fit_end], 
-                                        f1_func(f_xrange[fit_begin:fit_end], *fit_param_dict[ch_id]), 
-                                        fit_param_dict[ch_id])
-            statbox_ls.append(f'{ch_id} red. chisqr = {red_chisqr_dict[ch_id]:.2f}')
-            fitresult_ls.append(f'{ch_id} long time constant = {fit_param_dict[ch_id][1]:.1f} | short time constant = {fit_param_dict[ch_id][3]:.1f}')
-        # text_in_box_0 = AnchoredText('\n'.join(statbox_ls_0), loc='upper center') #debug
-        # ax_8[0].add_artist(text_in_box_0) #debug
+            ax_8.plot(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
+                         f0_func(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
+                              *fit_param_dict[ch_id]), linewidth=2.5, color=f'C{ch_id+3}', label=f'fit {ch_id}')
+            red_chisqr_dict[ch_id] = red_chisq(wf_ch_data[f1_range][fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
+                                    f0_func(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
+                                    *fit_param_dict[ch_id]), fit_param_dict[ch_id])
+            # statbox_ls.append(f'{ch_id}: red. chisqr = {red_chisqr_dict[ch_id]:.2f}')
+            statbox_ls.append(f'Ch {ch_id}: ' '$\\chi^{2}/\\nu$' f' = {red_chisqr_dict[ch_id]:.2f}')
+            fitresult_ls.append(f'{ch_id}: long time constant = {fit_param_dict[ch_id][2]:.1f} | short time constant = {fit_param_dict[ch_id][4]:.1f}') # temp
+            # ax_8.axvline(f_xrange[wf_peak_ch], color='gray', linestyle=':')
+
         text_in_box = AnchoredText('\n'.join(statbox_ls), loc='upper center')
-        fit_result_in_box = AnchoredText('\n'.join(fitresult_ls), loc='upper center')
-        ax_8[0].legend()
-        ax_8[0].set_title(f'stacked {data_name}') # =filtered wf
-        ax_8[0].set_yscale('log')
-        ax_8[0].grid()
-        ax_8[1].set_title(f'shifted truncated {data_name}')
-        ax_8[1].set_xlabel('time [ns]')
-        ax_8[1].set_yscale('log')
-        ax_8[1].grid()
-        ax_8[1].add_artist(text_in_box)
-        ax_8[1].add_artist(fit_result_in_box)
-        ax_8[1].axvline(x=f_xrange[fit_begin], color='grey', linestyle='--')
-        ax_8[1].axvline(x=f_xrange[fit_end], color='grey', linestyle='--')
-        ax_8[1].legend()
+        ax_8.set_xlim(0, 15000) # just for the paper
+        ax_8.add_artist(text_in_box)
+        fit_result_in_box = AnchoredText('\n'.join(fitresult_ls), loc='lower center')
+        ax_8.add_artist(fit_result_in_box)
+        ax_8.legend(loc = 'upper right')
+        # ax_8.set_title(f'stacked {data_name}') # =filtered wf
+        ax_8.set_yscale('log')
+        ax_8.grid()
+        ax_8.set_xlabel('time [ns]')
         if 'Filtered wf' in data_name:
             save_plot(fig_8, 'stacked_flt_wf')
         elif 'Stacked wf' in data_name:
@@ -486,27 +470,21 @@ def calculate_time_constant():
             print(f'red. chisqr {ch_id}:{red_chisqr_dict[ch_id]}')
             print(f'fit param {ch_id}:{fit_param_dict[ch_id]}')
             print(f'std deviation for the fitted parameters for {ch_id}: {fit_std_dict[ch_id]}')
-        if statbox_ls_0:
-            print(f'\n Results using Unshifted waveform:')
-            for ch_id in range(3):
-                print(f'red. chisqr {ch_id}:{red_chisqr_dict_0[ch_id]}')
-                print(f'fit param {ch_id}:{fit_param_dict_0[ch_id]}')
-                print(f'std deviation for the fitted parameters for {ch_id}: {fit_std_dict_0[ch_id]}')
         return fit_param_dict, red_chisqr_dict
     stacked_flt_wf_dict = stack_flt_wf(flt_dict)
     # stacked_flt_wf_dict = pickle.load(open('../output/00126_part_output/stacked_flt_wf_dict.pkl', 'rb')) #debug
     stacked_wf_dict = stack_wf(wfs)
     # stacked_wf_dict = pickle.load(open('../output/00126_part_output/stacked_wf_dict.pkl', 'rb')) #debug
     fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked Filtered wf', stacked_flt_wf_dict)
-    fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked wf', stacked_wf_dict)
+    # fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked wf', stacked_wf_dict)
 
     ## --- create parts: instead of one stack we get n stacks. ----
-    number_of_parts = 6
-    break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
-    for part_id in range(number_of_parts):
-        # print('start end event_PassList:', break_indices[part_id], break_indices[part_id + 1])     # debug
-        part_stacked_flt_wf = create_part_stack_flt_wf(flt_dict, [int(break_indices[part_id]), int(break_indices[part_id + 1])])
-        part_fit_param_dict, part_red_chisqr_dict = fit_all_channels(f'Stacked Flt wf part_{part_id}', part_stacked_flt_wf)
+    # number_of_parts = 6
+    # break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
+    # for part_id in range(number_of_parts):
+    #     # print('start end event_PassList:', break_indices[part_id], break_indices[part_id + 1])     # debug
+    #     part_stacked_flt_wf = create_part_stack_flt_wf(flt_dict, [int(break_indices[part_id]), int(break_indices[part_id + 1])])
+    #     part_fit_param_dict, part_red_chisqr_dict = fit_all_channels(f'Stacked Flt wf part_{part_id}', part_stacked_flt_wf)
     
     return fit_param_dict, red_chisqr_dict #TODO: write to csv.
 
@@ -656,16 +634,16 @@ plt.close(fig_3)
 
 fit_param_dict, red_chisqr_dict = calculate_time_constant()
 
-## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
-hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList)
-## hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
-fit_charge_distribution(hist_wf_sum_postcut)
-## ------------------------------ PartWise: Fit Gauss to integrated Charge Distribution ----------------------
-number_of_parts = 6
-break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
-for part_id in range(number_of_parts):
-    part_hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList[int(break_indices[part_id]) : int(break_indices[part_id + 1])], 
-                                                                        part_id = f'_part_{part_id}')
-    fit_charge_distribution(part_hist_wf_sum_postcut, part_id = f'_part_{part_id}')
+# ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
+# hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList)
+# ## hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
+# fit_charge_distribution(hist_wf_sum_postcut)
+# ## ------------------------------ PartWise: Fit Gauss to integrated Charge Distribution ----------------------
+# number_of_parts = 6
+# break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
+# for part_id in range(number_of_parts):
+#     part_hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList[int(break_indices[part_id]) : int(break_indices[part_id + 1])], 
+#                                                                         part_id = f'_part_{part_id}')
+#     fit_charge_distribution(part_hist_wf_sum_postcut, part_id = f'_part_{part_id}')
 
 print(f'Execution time: {perf_counter() - t0}')
