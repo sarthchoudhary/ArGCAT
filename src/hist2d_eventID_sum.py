@@ -32,7 +32,7 @@ def hist2d_eventID_sum(run_name: str) -> None:
 
     output_dir = '/work/chuck/sarthak/argset/output_folder/analysis/'
     data_dir = '/work/chuck/sarthak/argset/event_catalogues'
-    run_name_pattern = f'*run{run_name}*'
+    run_name_pattern = f'*run{run_name}_*'
     subrun_path_list = glob(path.join(data_dir, run_name_pattern))
     subrun_sum_dict = {0: [],
     1: [],
