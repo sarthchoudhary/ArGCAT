@@ -32,7 +32,8 @@ def hist2d_eventID_sum(run_name: str) -> None:
 
     output_dir = '/work/chuck/sarthak/argset/output_folder/analysis/'
     data_dir = '/work/chuck/sarthak/argset/event_catalogues'
-    run_name_pattern = f'*run{run_name}_*'
+    # run_name_pattern = f'*run{run_name}*' # outdated
+    run_name_pattern = f'*{run_name}*'
     subrun_path_list = glob(path.join(data_dir, run_name_pattern))
     subrun_sum_dict = {0: [],
     1: [],
@@ -93,16 +94,17 @@ def hist2d_eventID_sum(run_name: str) -> None:
         save_plot(fig_9, f'2d_eventID_sum_{ch_id}')
 ## ----------------------------------------- program -----------------------------------------
 
-# run_name_list = ['00162', '00159', '00156', '00154', '00126']
-# run_name_list = ['00162']
-# run_name_list = ['00162_truncated']
-# run_name_list = ['00126_truncated']
-# run_name_list = ['00159_truncated']
-# run_name_list = ['00126_part']
-# run_name_list = ['00108']
-# run_name_list = ['00110']
-run_name_list = ['00124']
-# run_name_list = ['00132']
+# run_name_list = ['run00162', 'run00159', 'run00156', 'run00154', 'run00126']
+# run_name_list = ['run00162']
+# run_name_list = ['run00162_truncated']
+# run_name_list = ['run00126_truncated']
+# run_name_list = ['run00159_truncated']
+# run_name_list = ['run00126_part']
+# run_name_list = ['run00108']
+# run_name_list = ['run00110']
+# run_name_list = ['run00124']
+# run_name_list = ['run00132']
+run_name_list = ['combinedrun00152']
 for run_name in run_name_list:
     hist2d_eventID_sum(run_name=run_name)
 
