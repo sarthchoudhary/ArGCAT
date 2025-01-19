@@ -19,12 +19,17 @@ import os
 import argparse
 from pyreco.manager.manager import Manager
 
+## ----------------------------------- matplotlib RC etc -----------------------------------------
 rc('figure', autolayout=True, figsize=[16, 9], dpi=125, titlesize=20 )
 rc('font', family='monospace')
 rc('axes', titlesize=20, titleweight='heavy', labelsize=16, labelweight='bold')
 rc(('xtick', 'ytick'), labelsize = 18)
 rc('legend', fontsize=14)
-
+rc('lines', linewidth=2.5)
+rc('mathtext', default = 'regular')
+rc('xtick.minor', visible = True, size = 6)
+rc('ytick.minor', visible = True, size = 8)
+# rc('axes.formatter', limits=[-1, 1])
 np.set_printoptions(formatter={'float': lambda x: f"{x:10.4g}"})
 
 ## ----------------------------------------- directories -----------------------------------------
@@ -148,9 +153,11 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
     def f_gauss(x, f_mean, f_sigma, f_k):
         return f_k*(1/(f_sigma*np.sqrt(2*np.pi)))*np.exp(-0.5*((x-f_mean)/f_sigma)**2)
     
-    hist_content, hist_edges, histObjects = hist_features[ch_x]
+    hist_content, hist_edges, _histObjects = hist_features[ch_x]
     com_peak = np.argmax(hist_content)
-    x_range = np.arange(com_peak - 25, com_peak + 30) # 00159_truncated
+    # x_range = np.arange(com_peak - 40, com_peak + 40) # combined run00156 -- not good
+    x_range = [np.arange(com_peak - 30, com_peak + 30), np.arange(com_peak - 40, com_peak + 40), np.arange(com_peak - 40, com_peak + 40)][ch_x] # variable width of fit ranges for combined run00156
+    # x_range = np.arange(com_peak - 25, com_peak + 30) # 00159_truncated
     # x_range = np.arange(com_peak - 15, com_peak + 17) # 00126_truncated
     # x_range = np.arange(com_peak -7, com_peak + 9) # 00126_truncated didn't work
     # x_range = np.arange(com_peak -16, com_peak + 20) # 00156_truncated
@@ -159,12 +166,12 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
     # x_range = np.arange(235, 270)
     # x_range = np.arange(220, 281)
 
-    p0_input = [1270, 208, 1e6]
+    ## p0_input = [1270, 208, 1e6]
+    p0_input = {0:[1000, 212, 1e6], 1:[1270, 208, 1e6], 2:[1270, 208, 1e6]}
 
-    fitted_parameters, pcov = curve_fit(f_gauss, 
+    fitted_parameters, _pcov = curve_fit(f_gauss, 
                                 hist_edges[x_range], hist_content[x_range], \
-                                p0 = p0_input,
-
+                                p0 = p0_input[ch_x],
                                 )
 
     red_chisqr_value = red_chisq(hist_content[x_range], \
@@ -196,7 +203,7 @@ def apply_cuts(wfs, pretrigger_sum_UpperThreshold=4000, sigma_multiplier=2.0,
                pulse_difference_threshold=40):
     # com_threshold = 300 # not in use
     ch_id = 1
-    com_below_xsigma = com_mean_arr - sigma_multiplier*com_std_arr # was 2 # explore and investigate thresholds
+    com_below_xsigma = com_mean_arr - sigma_multiplier*com_std_arr # sigma_multiplier was 2 # explore and investigate thresholds
     com_above_xsigma = com_mean_arr + sigma_multiplier*com_std_arr
     for event_x in range(wfs.shape[0]): #event_x is NOT pandas index.
         if pretrigger_sum[0][event_x] <= pretrigger_sum_UpperThreshold and pretrigger_sum[0][event_x] >= -6000:
@@ -265,30 +272,42 @@ def histogram_wf_sum():
     plt.close(fig_4)
 
 def histogram_wf_sum_before_and_after_cuts(part_event_PassList: list, part_id:str='') -> dict:
+    '''The part_id argument is optional. Only useful when this function is called inside partwise analysis loop.'''
     hist_wf_sum = {0:0, 1:0, 2: 0}
     hist_wf_sum_postcut = {0:0, 1:0, 2: 0}
-    hist_wf_sum_range = {0:(-2.5E6, 0.5E7), 1: (-1E6, 1E6), 2:(-1E6, 1E6)} #run00126
-    # hist_wf_sum_range = {0:(-0.25E6, 2.75E6), 1: (-0.25E5, 0.25E6), 2:(-0.25E5, 0.5E6)} #run00152 #TODO: dynamic
+    hist_wf_sum_range = {0:(-0.1E6, 1.0E6), 1: (-2.5E4, 1.0E5), 2:(-2.5E4, 1.30E5)} #combined run00156
+    # hist_wf_sum_range = {0:(-2.5E6, 0.5E7), 1: (-1E6, 1E6), 2:(-1E6, 1E6)} #run00126
+    # hist_wf_sum_range = {0:(-0.25E6, 2.75E6), 1: (-0.25E5, 0.25E6), 2:(-0.25E5, 0.5E6)} #run00152 #TODO: dynamic or from config
     # hist_wf_sum_range = {0:(-6E3, 1.25E6), 1: (-6E3, 1E5), 2:(-6E3, 1.5E5)} #run00159_truncated
     fig_5, ax_5 = plt.subplots( 3, 2, figsize=(18, 16), sharex=False, sharey=False)
+    plt.subplots_adjust(hspace=1.0)
     for ch_id in range(3):
         wf_sum_ch = pd.Series(wf_sum_dict[ch_id])
-        # hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=10000, 
+        # hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=10000,
         hist_wf_sum[ch_id] = ax_5[ch_id][0].hist(wf_sum_ch, bins=5000,
                         range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
         ax_5[ch_id][0].set_title(f'waveform sum {part_id}')
+        ax_5[ch_id][0].set_xlabel('integrated charge [4ns$\cdot$ADC units]')
+        ax_5[ch_id][0].set_ylabel('counts')
         ax_5[ch_id][0].legend()
         ax_5[ch_id][0].grid()
-        hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[part_event_PassList], bins=10000, #run00126
-        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, #run00126
+        # ax_5[ch_id][0].tick_params(axis='x', rotation=30)
+        ax_5[ch_id][0].ticklabel_format(style='scientific', axis='x', scilimits=[-1, 2])
+        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[part_event_PassList], bins=10000, #run00126
+        hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[part_event_PassList], bins=5000, #run00126
+        # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=10000, #run00126 #TODO: event_PassList --> part_event_PassList
         # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=5000, #run00152
         # hist_wf_sum_postcut[ch_id] = ax_5[ch_id][1].hist(wf_sum_ch[event_PassList], bins=100, #run00159_truncated
                         range=hist_wf_sum_range[ch_id], color=f'C{ch_id}', label = f'{ch_id}')
-        ax_5[ch_id][1].set_title(f'wf sum post cut {part_id}')
+        ax_5[ch_id][1].ticklabel_format(style='scientific', axis='x', scilimits=[-1, 2])
+        ax_5[ch_id][1].set_title(f'wf sum post cuts {part_id}')
+        ax_5[ch_id][1].set_xlabel('integrated charge [4ns$\cdot$ADC units]')
+        ax_5[ch_id][1].set_ylabel('counts')
         ax_5[ch_id][1].legend()
         ax_5[ch_id][1].grid()
+        # ax_5[ch_id][1].tick_params(axis='x', rotation=30)
     save_plot(fig_5, f'histogram_wf_sum_before_and_after_cuts{part_id}')
-    pickle_dict( hist_wf_sum_postcut, f'hist_wf_sum_postcut{part_id}')
+    pickle_dict( hist_wf_sum_postcut, f'hist_wf_sum_postcuts {part_id}')
     return hist_wf_sum_postcut
 
 def fit_charge_distribution(hist_wf_sum_postcut: dict, part_id:str = ''):
@@ -336,12 +355,17 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict, part_id:str = ''):
         text_in_box = AnchoredText(f"statistics = {np.sum(hist_content[ch_range])} \nreduced chisqr = {red_chisqr_value:.2f}", \
                                                 loc='upper left')
         ax_7[ch_id].add_artist(text_in_box)
+        # ax_7[ch_id].tick_params(axis='x', rotation=30)
+        ax_7[ch_id].ticklabel_format(style='scientific', axis='x', scilimits=[-1, 2])
+        if ch_id == 2:
+            ax_7[ch_id].set_xlabel('integrated charge [4ns$\cdot$ADC units]')
+        ax_7[ch_id].set_ylabel('counts')
         ax_7[ch_id].grid()
         # ax_7[ch_id].set_title('Fit to distribution of full wf sum')
         ax_7[ch_id].legend()
     peak_asymmetry = (fit_param_dict[1][0] - fit_param_dict[2][0])/(fit_param_dict[1][0] + fit_param_dict[2][0])
-    ax_7[0].add_artist(AnchoredText(f"Asymmetry = {peak_asymmetry:.3f}", loc = 'center left'))
-    fig_7.suptitle(f'Fit to distribution of full wf sum{part_id}')
+    # ax_7[0].add_artist(AnchoredText(f"Asymmetry = {peak_asymmetry:.3f}", loc = 'center left'))  # commented out for paper
+    # fig_7.suptitle(f'Fit to distribution of full wf sum{part_id}') # commented out for paper
     save_plot(fig_7, f'charge_distribution_fit{part_id}')
     print(f'\n fit to charge distributions post cuts {part_id}:')
     # print('\n')
@@ -450,14 +474,15 @@ def calculate_time_constant():
 
         text_in_box = AnchoredText('\n'.join(statbox_ls), loc='upper center')
         ax_8.set_xlim(0, 15000) # just for the paper
-        ax_8.add_artist(text_in_box)
+        # ax_8.add_artist(text_in_box)
         fit_result_in_box = AnchoredText('\n'.join(fitresult_ls), loc='lower center')
-        ax_8.add_artist(fit_result_in_box)
+        # ax_8.add_artist(fit_result_in_box)
         ax_8.legend(loc = 'upper right')
         # ax_8.set_title(f'stacked {data_name}') # =filtered wf
         ax_8.set_yscale('log')
         ax_8.grid()
         ax_8.set_xlabel('time [ns]')
+        ax_8.set_ylabel('amplitude [ADC units]')
         if 'Filtered wf' in data_name:
             save_plot(fig_8, 'stacked_flt_wf')
         elif 'Stacked wf' in data_name:
@@ -472,12 +497,13 @@ def calculate_time_constant():
             print(f'std deviation for the fitted parameters for {ch_id}: {fit_std_dict[ch_id]}')
         return fit_param_dict, red_chisqr_dict
     stacked_flt_wf_dict = stack_flt_wf(flt_dict)
-    # stacked_flt_wf_dict = pickle.load(open('../output/00126_part_output/stacked_flt_wf_dict.pkl', 'rb')) #debug
+    ## stacked_flt_wf_dict = pickle.load(open('../output/00126_part_output/stacked_flt_wf_dict.pkl', 'rb')) #debug
     stacked_wf_dict = stack_wf(wfs)
-    # stacked_wf_dict = pickle.load(open('../output/00126_part_output/stacked_wf_dict.pkl', 'rb')) #debug
-    fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked Filtered wf', stacked_flt_wf_dict)
-    # fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked wf', stacked_wf_dict)
+    ## stacked_wf_dict = pickle.load(open('../output/00126_part_output/stacked_wf_dict.pkl', 'rb')) #debug
+    fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked Filtered wf', stacked_flt_wf_dict) ## optional: disable if only PartWise analysis is needed
+    ## fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked wf', stacked_wf_dict)
 
+    ## --- PartWise --- ##
     ## --- create parts: instead of one stack we get n stacks. ----
     # number_of_parts = 6
     # break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
@@ -553,8 +579,9 @@ fig_1, ax_1 = plt.subplots( 3, 1, figsize=(10, 8), sharex=True, sharey = True)
 
 print(f'\n fitting COM distribution peak..')
 for ch_x in range(3):
-    # hist_features[ch_x] = ( ax_1[ch_x].hist(com_dict[ch_x], bins=np.arange(-5_000, 5_000, 25),
-    hist_features[ch_x] = ( ax_1[ch_x].hist(com_dict[ch_x], bins=np.arange(-500, 2500, 10),  # run00126_truncated
+    hist_features[ch_x] = ( ax_1[ch_x].hist(com_dict[ch_x], 
+                            # bins=np.arange(-5_000, 5_000, 25),
+                            bins=np.arange(-500, 2500, 10),  # run00126_truncated
                             color=f'C{ch_x}', label = f'{ch_x}')
                             )
     ax_1[ch_x].legend()
@@ -587,7 +614,8 @@ event_FailList_3rdCut= []
 
 apply_cuts(wfs)
 
-hist_plot_range = (0e6, 5e6) #run00126
+# hist_plot_range = (0e6, 5e6) #run00126
+hist_plot_range = (0.0, 1.0e6) #combined run00156 
 # hist_plot_range = (0e6, 2.5e6) #run00152, run00126_truncated
 # hist_plot_range = (0e6, 1.0e6) #run00156_truncated, 159_truncated
 fig_2, ax_2 = plt.subplots( 5, 1, figsize=(19, 15), sharex=True, sharey = False)
@@ -611,7 +639,8 @@ for subplot_x in range(4):
     ax_2[subplot_x].legend()
     ax_2[subplot_x].grid()
     ax_2[subplot_x].set_ylabel('counts')
-    ax_2[subplot_x].set_ylim(0, 1000) #TODO: dynamic
+    # ax_2[subplot_x].set_ylim(0, 1000) #TODO: dynamic
+    ax_2[subplot_x].set_ylim(0, 2000) #combined run00156
 ax_2[4].legend()
 ax_2[4].set_ylabel('cut efficiency')
 ax_2[4].set_xlabel('Full WF sum')
@@ -632,12 +661,13 @@ save_plot(fig_3, 'hist_COM_post_cut')
 plt.close(fig_3)
 ## ----------------------------------------- Time Constant -----------------------------------------
 
-fit_param_dict, red_chisqr_dict = calculate_time_constant()
+# fit_param_dict, red_chisqr_dict = calculate_time_constant()
+# calculate_time_constant() ## optional: useful when disabling fit to entire run
 
 # ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
-# hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList)
-# ## hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
-# fit_charge_distribution(hist_wf_sum_postcut)
+hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList)
+## hist_wf_sum_postcut = pickle.load(open('../output/00126_part_output/hist_wf_sum_postcut.pkl', 'rb')) #debug
+fit_charge_distribution(hist_wf_sum_postcut)
 # ## ------------------------------ PartWise: Fit Gauss to integrated Charge Distribution ----------------------
 # number_of_parts = 6
 # break_indices = np.linspace(0, len(event_PassList), number_of_parts+1)
