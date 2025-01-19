@@ -45,8 +45,8 @@ def hist2d_eventID_sum(run_name: str) -> None:
     if not path.isdir(output_subdir):
             os.mkdir(output_subdir)
     if not subrun_path_list:
-         print(f'No event catalogues found matching given pattern. Exiting...')
-         sys.exit()
+        print(f'No event catalogues found matching given pattern. Exiting...')
+        sys.exit()
     for subrun_path in subrun_path_list:
     # for subrun in subrun_name_list:
         # subrun_path = path.join(data_dir, subrun)
@@ -63,19 +63,19 @@ def hist2d_eventID_sum(run_name: str) -> None:
     # sum_cutoff = {0: 2.5E6, 1: 250E3, 2: 250E3} # 152
     # sum_cutoff = {0: 1.0E7, 1: 0.750E6, 2: 1E6} # 126
     # sum_cutoff = {0: 5.0E6, 1: 1.0E6, 2: 1.0E6} # 154
-    # sum_cutoff = {0: 1.5E6, 1: 2.0E5, 2: 2.0E5} # 156
+    sum_cutoff = {0: 1.5E6, 1: 2.0E5, 2: 2.0E5} # 156
     # sum_cutoff = {0: 2.0E6, 1: 0.250E6, 2: 0.250E6} # 159
     # sum_cutoff = {0: 1.25E6, 1: 0.150E6, 2: 0.55E6} # 162
     # sum_cutoff = {0: 1.25E6, 1: 0.150E6, 2: 0.55E6} # 162_truncated
     # sum_cutoff = {0: 2.5E6, 1: 2.5E5, 2: 2.5E5} # 156_truncated
-    sum_cutoff = {0: 5.10E6, 1: 0.50E6, 2: 0.750E6} # 126_truncated
+    # sum_cutoff = {0: 5.10E6, 1: 0.50E6, 2: 0.750E6} # 126_truncated
     # sum_cutoff = {0: 3.3E6, 1: 5.0E5, 2: 5.0E5} # 159_truncated
     for ch_id in range(3) :
         fig_9, ax_9 = plt.subplots(1,1, figsize=(10, 8))
         print(f'Number of events {ch_id}: {len(subrun_sum_dict[ch_id])}')
         y = subrun_sum_dict[ch_id]
         cutoff = sum_cutoff[ch_id]
-        # y = [subrun_sum for subrun_sum in y if subrun_sum < cutoff and subrun_sum >= 0]
+        y = [subrun_sum for subrun_sum in y if subrun_sum < cutoff and subrun_sum >= 0]
         x = np.arange(len(y))
         hist_content, hist_xedges, hist_yedges, histObjects = \
             ax_9.hist2d(x, y, bins=[100, 100], \
@@ -86,12 +86,14 @@ def hist2d_eventID_sum(run_name: str) -> None:
         # ax_9.legend()
         # ax_9.set_title(f'channel: {ch_id}')
         ax_9.set_xlabel('EventID')
-        ax_9.set_ylabel('Full wf sum')
-        ax_9.set_xticklabels(ax_9.get_xticklabels(), rotation=45, ha='right')
-        fig_9.suptitle(f'EventID vs Event wf sum in Channel {ch_id}')
+        # ax_9.set_ylabel('Full wf sum')
+        ax_9.set_ylabel('integrated charge [4ns$\cdot$ADC units]')
+        # ax_9.set_xticklabels(ax_9.get_xticklabels(), rotation=45, ha='right')
+        ax_9.ticklabel_format(style='scientific', axis='both', scilimits=[-1, 2])
+        # fig_9.suptitle(f'EventID vs Event wf sum in Channel {ch_id}') # commented out for paper
         fig_9.colorbar(histObjects, ax=ax_9)
-        # save_plot(fig_9, f'2d_eventID_sum_zoomed_in_{ch_id}')
-        save_plot(fig_9, f'2d_eventID_sum_{ch_id}')
+        save_plot(fig_9, f'2d_eventID_sum_zoomed_in_{ch_id}')
+        # save_plot(fig_9, f'2d_eventID_sum_{ch_id}')
 ## ----------------------------------------- program -----------------------------------------
 
 # run_name_list = ['run00162', 'run00159', 'run00156', 'run00154', 'run00126']
@@ -104,7 +106,8 @@ def hist2d_eventID_sum(run_name: str) -> None:
 # run_name_list = ['run00110']
 # run_name_list = ['run00124']
 # run_name_list = ['run00132']
-run_name_list = ['combinedrun00152']
+# run_name_list = ['combinedrun00152']
+run_name_list = ['combinedrun00156']
 for run_name in run_name_list:
     hist2d_eventID_sum(run_name=run_name)
 
