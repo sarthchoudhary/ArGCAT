@@ -10,3 +10,4 @@
 /scripts/*.log
 /scripts/*.root
 /temp_folder
+chuck-*.out
