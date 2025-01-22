@@ -52,18 +52,6 @@ def argument_collector() ->argparse.Namespace:
 
 args = argument_collector()
 
-## ----------------------------------------- loading data -----------------------------------------
-# # filename = 'event_catalogue_run00126.pkl' #TODO: remove in required cleanup
-# # filename = 'event_catalogue_run00126_part.pkl'
-# # filename = 'event_catalogue_run00152_00.pkl'
-# # filename = 'event_catalogue_run00152_01.pkl'
-# # filename = 'event_catalogue_run00159_00.pkl'
-# # filename = 'event_catalogue_run00156_truncated.pkl'
-# # filename = 'event_catalogue_run00126_truncated.pkl'
-# # filename = 'event_catalogue_run00159_truncated.pkl'
-# # filename = 'event_catalogue_run00162_truncated.pkl'
-# #TODO: some object to quicky switch between hist features for PEN and TPB runs
-
 filename = args.filename
 file_basename = filename.split(sep='_run')[-1].split(sep='.')[0]
 output_subdir = path.join(output_dir, f'{file_basename}_output')
@@ -158,7 +146,7 @@ def fit_com_peak(ch_x: int, ax_1: matplotlib.axes.Axes, hist_features: dict):
     
     hist_content, hist_edges, _histObjects = hist_features[ch_x]
     com_peak = np.argmax(hist_content)
-    # x_range = np.arange(com_peak - 40, com_peak + 40) # combined run00156 -- not good
+    # x_range = np.arange(com_peak - 40, com_peak + 40) # combined run00156 -- not good ##TODO: this should be provided from a config file
     x_range = [np.arange(com_peak - 30, com_peak + 30), np.arange(com_peak - 40, com_peak + 40), np.arange(com_peak - 40, com_peak + 40)][ch_x] # variable width of fit ranges for combined run00156
     # x_range = np.arange(com_peak - 25, com_peak + 30) # 00159_truncated
     # x_range = np.arange(com_peak - 15, com_peak + 17) # 00126_truncated
@@ -344,7 +332,6 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict, ax_5, fig_5, part_id:str 
         hist_content, hist_edges, _histObjects = hist_wf_sum_postcut[ch_id]
         del _histObjects
         ch_range = x_range[ch_id]
-        # ch_range = hist_edges[:] #TODO: verify
         fitted_parameters, pcov = curve_fit(f_gauss,
                                     hist_edges[ch_range], hist_content[ch_range], \
                                     p0 = p0_input[ch_id],
@@ -356,25 +343,39 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict, ax_5, fig_5, part_id:str 
         fit_param_dict[ch_id] = fitted_parameters
         fit_std_dict[ch_id] = np.sqrt(np.diag(pcov)) 
         red_chisqr_dict[ch_id] = red_chisqr_value
+        # ax_7[ch_id].hist(hist_edges[:-1], hist_edges, weights=hist_content, histtype='stepfilled',
+        #                  color=f'C{ch_id}', label =f'{ch_id}')
         # ax_5[ch_id][1].hist(hist_edges[:-1], hist_edges, weights=hist_content, histtype='stepfilled',
         #                  color=f'C{ch_id}', label =f'{ch_id}')
+#         ax_7[ch_id].plot(hist_edges[ch_range], f_gauss(hist_edges[ch_range], *fitted_parameters),
+#                          label='fit', color=f'C{ch_id+3}')
         ax_5[ch_id][1].plot(hist_edges[ch_range], f_gauss(hist_edges[ch_range], *fitted_parameters),
                          label='fit', color=f'C{ch_id+3}')
         text_in_box = AnchoredText(f"statistics = {np.sum(hist_content[ch_range])} \nreduced chisqr = {red_chisqr_value:.2f}", \
                                                 loc='upper left')
+        # ax_7[ch_id].add_artist(text_in_box)
         ax_5[ch_id][1].add_artist(text_in_box)
+        # ax_7[ch_id].tick_params(axis='x', rotation=30)
         # ax_5[ch_id][1].tick_params(axis='x', rotation=30)
+        # ax_7[ch_id].ticklabel_format(style='scientific', axis='x', scilimits=[-1, 2])
         # ax_5[ch_id][1].ticklabel_format(style='scientific', axis='x', scilimits=[-1, 2])
         # if ch_id == 2:
         #     ax_5[ch_id][1].set_xlabel('integrated charge [4ns$\cdot$ADC units]')
+        #     ax_7[ch_id].set_xlabel('integrated charge [4ns$\cdot$ADC units]')
         # ax_5[ch_id][1].set_ylabel('counts')
         # ax_5[ch_id][1].grid()
         # ax_5[ch_id][1].set_title('Fit to distribution of full wf sum')
         ax_5[ch_id][1].legend()
+#         ax_7[ch_id].set_ylabel('counts')
+#         ax_7[ch_id].grid()
+#         # ax_7[ch_id].set_title('Fit to distribution of full wf sum')
+#         ax_7[ch_id].legend()
+
     peak_asymmetry = (fit_param_dict[1][0] - fit_param_dict[2][0])/(fit_param_dict[1][0] + fit_param_dict[2][0])
     # ax_7[0].add_artist(AnchoredText(f"Asymmetry = {peak_asymmetry:.3f}", loc = 'center left'))  # commented out for paper
     # fig_7.suptitle(f'Fit to distribution of full wf sum{part_id}') # commented out for paper
     save_plot(fig_5, f'charge_distribution_fit{part_id}')
+    # save_plot(fig_7, f'charge_distribution_fit{part_id}')
     print(f'\n fit to charge distributions post cuts {part_id}:')
     # print('\n')
     for ch_id in range(3):
@@ -383,72 +384,6 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict, ax_5, fig_5, part_id:str 
         print(f'std deviation for the fitted parameters for {ch_id}: {fit_std_dict[ch_id]}')
     print(f'Fitted charge peak Asymmetry: {peak_asymmetry}')
     return fit_param_dict
-
-# def fit_charge_distribution(hist_wf_sum_postcut: dict, part_id:str = ''):
-#     fit_param_dict = {0:0, 1:0, 2:0}
-#     fit_std_dict = {0:0, 1:0, 2:0}
-#     red_chisqr_dict = {0:0, 1:0, 2:0}
-#     peak_loc = {0:0, 1:0, 2:0}
-#     x_range = {0: 0,1: 0,2: 0}
-#     # distance_to_peak = {0:[15, 12], 1:[25, 20], 2:[25, 20]} # 00159_truncated
-#     # distance_to_peak = {0:[1000, 1000], 1:[1000, 1200], 2:[700, 800]}
-#     distance_to_peak = {0:[1000, 1000],  1:[545, 645], 2:[700, 800]} # 1:[645, 745], 2:[700, 800]} # run00126_truncated
-#     for ch_id in range(3): # dynamic
-#         peak_loc[ch_id] = np.argmax(hist_wf_sum_postcut[ch_id][0])
-#         # x_range[ch_id] = np.arange(peak_loc[ch_id]-600, peak_loc[ch_id] + 1000)
-#         # x_range[ch_id] = np.arange(peak_loc[ch_id]-300, peak_loc[ch_id] + 500)
-#         # x_range[ch_id] = np.arange(peak_loc[ch_id]-625, peak_loc[ch_id] + 625)
-#         x_range[ch_id] = np.arange(peak_loc[ch_id] - distance_to_peak[ch_id][0], 
-#                                    peak_loc[ch_id] + distance_to_peak[ch_id][1]) # run00126_truncated
-#     # x_range = {0: np.arange(2912, 3560), 1: np.arange(2800, 3534), 2: np.arange(2003, 2803)}  # PEN run00152
-#     # x_range = {0: np.arange(5332, 7999), 1: np.arange(5549, 6149), # TPB run00126
-#     #            2: np.arange(5900, 7400)} # (6169, 7250) (6219, 7199) (6149, 6899)
-#     # x_range = {0: np.arange(2912, 3560), 1: np.arange(2800, 3534), 2: np.arange(2003, 2803)} #PEN run00156_truncated
-#     p0_input = {0: [2.5E6, 1E6, 100], 1: [0.18E6, 0.12E6, 100], 2: [0.32E6, 0.18E6, 100]}
-
-#     fig_7, ax_7 = plt.subplots(3, 1, figsize=(10, 8)) #(18, 16))
-#     for ch_id in range(3):
-#         hist_content, hist_edges, _histObjects = hist_wf_sum_postcut[ch_id]
-#         del _histObjects
-#         ch_range = x_range[ch_id]
-#         fitted_parameters, pcov = curve_fit(f_gauss,
-#                                     hist_edges[ch_range], hist_content[ch_range], \
-#                                     p0 = p0_input[ch_id],
-#                                     )
-
-#         red_chisqr_value = red_chisq(hist_content[ch_range], \
-#             f_gauss(hist_edges[ch_range], *fitted_parameters), fitted_parameters
-#         )
-#         fit_param_dict[ch_id] = fitted_parameters
-#         fit_std_dict[ch_id] = np.sqrt(np.diag(pcov)) 
-#         red_chisqr_dict[ch_id] = red_chisqr_value
-#         ax_7[ch_id].hist(hist_edges[:-1], hist_edges, weights=hist_content, histtype='stepfilled',
-#                          color=f'C{ch_id}', label =f'{ch_id}')
-#         ax_7[ch_id].plot(hist_edges[ch_range], f_gauss(hist_edges[ch_range], *fitted_parameters),
-#                          label='fit', color='red')
-#         text_in_box = AnchoredText(f"statistics = {np.sum(hist_content[ch_range])} \nreduced chisqr = {red_chisqr_value:.2f}", \
-#                                                 loc='upper left')
-#         ax_7[ch_id].add_artist(text_in_box)
-#         # ax_7[ch_id].tick_params(axis='x', rotation=30)
-#         ax_7[ch_id].ticklabel_format(style='scientific', axis='x', scilimits=[-1, 2])
-#         if ch_id == 2:
-#             ax_7[ch_id].set_xlabel('integrated charge [4ns$\cdot$ADC units]')
-#         ax_7[ch_id].set_ylabel('counts')
-#         ax_7[ch_id].grid()
-#         # ax_7[ch_id].set_title('Fit to distribution of full wf sum')
-#         ax_7[ch_id].legend()
-#     peak_asymmetry = (fit_param_dict[1][0] - fit_param_dict[2][0])/(fit_param_dict[1][0] + fit_param_dict[2][0])
-#     # ax_7[0].add_artist(AnchoredText(f"Asymmetry = {peak_asymmetry:.3f}", loc = 'center left'))  # commented out for paper
-#     # fig_7.suptitle(f'Fit to distribution of full wf sum{part_id}') # commented out for paper
-#     save_plot(fig_7, f'charge_distribution_fit{part_id}')
-#     print(f'\n fit to charge distributions post cuts {part_id}:')
-#     # print('\n')
-#     for ch_id in range(3):
-#         print(f'red. chisqr for {ch_id}: {red_chisqr_dict[ch_id]}')
-#         print(f'fitted parameters for {ch_id}: {fit_param_dict[ch_id]}')
-#         print(f'std deviation for the fitted parameters for {ch_id}: {fit_std_dict[ch_id]}')
-#     print(f'Fitted charge peak Asymmetry: {peak_asymmetry}')
-#     return fit_param_dict
 
 def stack_flt_wf(flt_dict:dict):
     stacked_flt_wf_dict= {
