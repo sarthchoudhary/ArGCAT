@@ -14,12 +14,17 @@ import sys
 from matplotlib import colors
 from glob import glob
 
+## ----------------------------------- matplotlib RC etc -----------------------------------------
 rc('figure', autolayout=True, figsize=[16, 9], dpi=125, titlesize=20 )
 rc('font', family='monospace')
 rc('axes', titlesize=20, titleweight='heavy', labelsize=16, labelweight='bold')
 rc(('xtick', 'ytick'), labelsize = 18)
 rc('legend', fontsize=14)
-
+rc('lines', linewidth=2.5)
+rc('mathtext', default = 'regular')
+rc('xtick.minor', visible = True, size = 6)
+rc('ytick.minor', visible = True, size = 8)
+# rc('axes.formatter', limits=[-1, 1])
 np.set_printoptions(formatter={'float': lambda x: f"{x:10.4g}"})
 
 ## ----------------------------------------- function definitions ---------------------------------
@@ -75,7 +80,7 @@ def hist2d_eventID_sum(run_name: str) -> None:
         print(f'Number of events {ch_id}: {len(subrun_sum_dict[ch_id])}')
         y = subrun_sum_dict[ch_id]
         cutoff = sum_cutoff[ch_id]
-        y = [subrun_sum for subrun_sum in y if subrun_sum < cutoff and subrun_sum >= 0]
+        y = [subrun_sum for subrun_sum in y if subrun_sum < cutoff and subrun_sum >= 0] #TODO: replace with set_ylim
         x = np.arange(len(y))
         hist_content, hist_xedges, hist_yedges, histObjects = \
             ax_9.hist2d(x, y, bins=[100, 100], \
@@ -85,6 +90,10 @@ def hist2d_eventID_sum(run_name: str) -> None:
         # ax_9[ch_id].legend()
         # ax_9.legend()
         # ax_9.set_title(f'channel: {ch_id}')
+        ax_9.axvline(x=0.05E5, color='grey')
+        ax_9.axvline(x=0.4E5, color='grey')
+        # ax_9.set_xlim(right=0.87E5)            #'combinedrun00156'
+        # ax_9.set_ylim(bottom=min(y), top=sum_cutoff[ch_id]) # doesn't work yet
         ax_9.set_xlabel('EventID')
         # ax_9.set_ylabel('Full wf sum')
         ax_9.set_ylabel('integrated charge [4ns$\cdot$ADC units]')
@@ -107,7 +116,8 @@ def hist2d_eventID_sum(run_name: str) -> None:
 # run_name_list = ['run00124']
 # run_name_list = ['run00132']
 # run_name_list = ['combinedrun00152']
-run_name_list = ['combinedrun00156']
+# run_name_list = ['combinedrun00156']
+run_name_list = ['run00156_truncated_new']
 for run_name in run_name_list:
     hist2d_eventID_sum(run_name=run_name)
 

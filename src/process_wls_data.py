@@ -1,6 +1,9 @@
 ## ----------------------------------------- computing resources -----------------------------------------
 ### srun --mem=16G -A bejger-grp -p dgx --pty bash
-## ----------------------------------------- setting-up libraries -----------------------------------------
+## -------------------------------------------------------------------------------------------------------
+## This code is not yet complete nonetheless the code works as expected. Some refactoring is needed.
+## -------------------------------------------------------------------------------------------------------
+## ----------------------------------------- setting-up libraries ----------------------------------------
 from time import perf_counter
 t0 = perf_counter()
 
@@ -50,7 +53,7 @@ def argument_collector() ->argparse.Namespace:
 args = argument_collector()
 
 ## ----------------------------------------- loading data -----------------------------------------
-# # filename = 'event_catalogue_run00126.pkl'
+# # filename = 'event_catalogue_run00126.pkl' #TODO: remove in required cleanup
 # # filename = 'event_catalogue_run00126_part.pkl'
 # # filename = 'event_catalogue_run00152_00.pkl'
 # # filename = 'event_catalogue_run00152_01.pkl'
@@ -320,7 +323,8 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict, ax_5, fig_5, part_id:str 
     # distance_to_peak = {0:[15, 12], 1:[25, 20], 2:[25, 20]} # 00159_truncated
     # distance_to_peak = {0:[1000, 1000], 1:[1000, 1200], 2:[700, 800]}
     # distance_to_peak = {0:[1000, 1000],  1:[545, 645], 2:[700, 800]} # 1:[645, 745], 2:[700, 800]} # run00126_truncated
-    distance_to_peak = {0:[700, 800],  1:[545, 645], 2:[700, 800]} # 1:[645, 745], 2:[700, 800]} # run00126_truncated
+    # distance_to_peak = {0:[700, 800],  1:[545, 645], 2:[700, 800]}
+    distance_to_peak = {0:[1200, 900],  1:[700, 1100], 2:[1100, 1000]}# run00156_truncated_new
 
     for ch_id in range(3): # dynamic
         peak_loc[ch_id] = np.argmax(hist_wf_sum_postcut[ch_id][0])
@@ -328,7 +332,7 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict, ax_5, fig_5, part_id:str 
         # x_range[ch_id] = np.arange(peak_loc[ch_id]-300, peak_loc[ch_id] + 500)
         # x_range[ch_id] = np.arange(peak_loc[ch_id]-625, peak_loc[ch_id] + 625)
         x_range[ch_id] = np.arange(peak_loc[ch_id] - distance_to_peak[ch_id][0], 
-                                   peak_loc[ch_id] + distance_to_peak[ch_id][1]) # run00126_truncated
+                                   peak_loc[ch_id] + distance_to_peak[ch_id][1]) # run00126_truncated, run00156_truncated_new
     # x_range = {0: np.arange(2912, 3560), 1: np.arange(2800, 3534), 2: np.arange(2003, 2803)}  # PEN run00152
     # x_range = {0: np.arange(5332, 7999), 1: np.arange(5549, 6149), # TPB run00126
     #            2: np.arange(5900, 7400)} # (6169, 7250) (6219, 7199) (6149, 6899)
@@ -355,7 +359,7 @@ def fit_charge_distribution(hist_wf_sum_postcut: dict, ax_5, fig_5, part_id:str 
         # ax_5[ch_id][1].hist(hist_edges[:-1], hist_edges, weights=hist_content, histtype='stepfilled',
         #                  color=f'C{ch_id}', label =f'{ch_id}')
         ax_5[ch_id][1].plot(hist_edges[ch_range], f_gauss(hist_edges[ch_range], *fitted_parameters),
-                         label='fit', color='red')
+                         label='fit', color=f'C{ch_id+3}')
         text_in_box = AnchoredText(f"statistics = {np.sum(hist_content[ch_range])} \nreduced chisqr = {red_chisqr_value:.2f}", \
                                                 loc='upper left')
         ax_5[ch_id][1].add_artist(text_in_box)
@@ -498,7 +502,8 @@ def calculate_time_constant():
         # bounds_input = ([1.0E3, 0E0, 1.0E03, 0E0], [1.0E9, 1.0E6, 1.0E9, 1.0E4]) # f1_func
         # p0_input = [10000, 3000, 5000, 100] # f1_func
         bounds_input = ([1.0E0, 0.0, 0.0, 1.0E03, 0.0], [1.0E10, 4.0E3, 1.0E6, 1.0E9, 1.0E4]) # f0_func
-        p0_input = [1.0E7, 2000, 3000, 1.0E5, 100] # f0_func
+        # p0_input = [1.0E7, 2000, 3000, 1.0E5, 100] # f0_func
+        p0_input = [1E7, 2000, 3000, 1E6, 10] # 156 truncated new
         fitted_parameters, pcov = curve_fit(given_func,
                                 f_xrange[fit_begin:fit_end], wf_ch_data[f1_range][fit_begin:fit_end], \
                                 p0 = p0_input,
@@ -509,6 +514,7 @@ def calculate_time_constant():
     def fit_all_channels(data_name:str, wf_data: np.ndarray):
         # (fit_begin, fit_end) = (50, 750) #f1_func LIDINE presentation
         (fit_begin, fit_end) = (25, 750) #f0_func
+        # (fit_begin, fit_end) = (75, 750) #f0_func run00156_truncated_new
         fit_param_dict= {0:0, 1:0, 2:0}
         fit_std_dict = {0:0, 1:0, 2:0}
         red_chisqr_dict = {0:0, 1:0, 2:0}
@@ -521,13 +527,14 @@ def calculate_time_constant():
             wf_peak_ch = np.argmax(wf_ch_data)
             f1_range = np.arange(wf_ch_data.shape[0])
             f_xrange = 4*f1_range # sampling rate 1 sample = 4 ns?
-            ax_8.plot(4*f1_range, wf_ch_data, label = f'{ch_id}')
+            ax_8.plot(4*f1_range, wf_ch_data, linestyle=':', label = f'{ch_id}')
 
-            # def f0_func(x, a0, a2, a3, a4): # fit function originally proposed by Marcin
-            #     a1 = wf_peak_ch# debug
-            #     return (a0/a2)*np.exp(-(x-a1)/a2) + (a3/a4)*np.exp(-(x-a1)/a4)
+            ## def f0_func(x, a0, a2, a3, a4): # fit function originally proposed by Marcin
+            ##     a1 = wf_peak_ch# debug
+            ##     return (a0/a2)*np.exp(-(x-a1)/a2) + (a3/a4)*np.exp(-(x-a1)/a4)
             def f0_func(x: np.ndarray, a0: float, a1: float, a2: float, a3: float, a4: float) -> np.ndarray:
                return (a0)*np.exp(-(x-a1)/a2) + (a3)*np.exp(-(x-a1)/a4)
+            print(f'Fitting ch_id:{ch_id}')#temp debug
             fit_param_dict[ch_id], pcov = fit_stack(f0_func, wf_ch_data, 
                                                 (fit_begin+wf_peak_ch, fit_end+wf_peak_ch), f1_range)
             fit_std_dict[ch_id] = np.sqrt(np.diag(pcov))
@@ -537,18 +544,18 @@ def calculate_time_constant():
             red_chisqr_dict[ch_id] = red_chisq(wf_ch_data[f1_range][fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
                                     f0_func(f_xrange[fit_begin+wf_peak_ch:fit_end+wf_peak_ch], 
                                     *fit_param_dict[ch_id]), fit_param_dict[ch_id])
-            # statbox_ls.append(f'{ch_id}: red. chisqr = {red_chisqr_dict[ch_id]:.2f}')
+            ## statbox_ls.append(f'{ch_id}: red. chisqr = {red_chisqr_dict[ch_id]:.2f}')
             statbox_ls.append(f'Ch {ch_id}: ' '$\\chi^{2}/\\nu$' f' = {red_chisqr_dict[ch_id]:.2f}')
             fitresult_ls.append(f'{ch_id}: long time constant = {fit_param_dict[ch_id][2]:.1f} | short time constant = {fit_param_dict[ch_id][4]:.1f}') # temp
             # ax_8.axvline(f_xrange[wf_peak_ch], color='gray', linestyle=':')
 
         text_in_box = AnchoredText('\n'.join(statbox_ls), loc='upper center')
-        ax_8.set_xlim(0, 15000) # just for the paper
+        ax_8.set_xlim(0, 6000) # just for the paper
         # ax_8.add_artist(text_in_box)
         fit_result_in_box = AnchoredText('\n'.join(fitresult_ls), loc='lower center')
         # ax_8.add_artist(fit_result_in_box)
         ax_8.legend(loc = 'upper right')
-        # ax_8.set_title(f'stacked {data_name}') # =filtered wf
+        ## ax_8.set_title(f'stacked {data_name}') # =filtered wf
         ax_8.set_yscale('log')
         ax_8.grid()
         ax_8.set_xlabel('time [ns]')
@@ -568,10 +575,11 @@ def calculate_time_constant():
         return fit_param_dict, red_chisqr_dict
     stacked_flt_wf_dict = stack_flt_wf(flt_dict)
     ## stacked_flt_wf_dict = pickle.load(open('../output/00126_part_output/stacked_flt_wf_dict.pkl', 'rb')) #debug
-    stacked_wf_dict = stack_wf(wfs)
+    ## stacked_wf_dict = stack_wf(wfs)
     ## stacked_wf_dict = pickle.load(open('../output/00126_part_output/stacked_wf_dict.pkl', 'rb')) #debug
-    fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked Filtered wf', stacked_flt_wf_dict) ## optional: disable if only PartWise analysis is needed
     ## fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked wf', stacked_wf_dict)
+    # fit_all_channels('Stacked Filtered wf', stacked_flt_wf_dict)
+    fit_param_dict, red_chisqr_dict = fit_all_channels('Stacked Filtered wf', stacked_flt_wf_dict) ## optional: disable if only the PartWise analysis is needed
 
     ## --- PartWise --- ##
     ## --- create parts: instead of one stack we get n stacks. ----
@@ -731,8 +739,8 @@ save_plot(fig_3, 'hist_COM_post_cut')
 plt.close(fig_3)
 ## ----------------------------------------- Time Constant -----------------------------------------
 
-# fit_param_dict, red_chisqr_dict = calculate_time_constant()
-calculate_time_constant() ## optional: useful when disabling fit to entire run
+fit_param_dict, red_chisqr_dict = calculate_time_constant()
+# calculate_time_constant() ## optional: useful when disabling fit to entire run
 
 # ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
 # hist_wf_sum_postcut = histogram_wf_sum_before_and_after_cuts(event_PassList)
