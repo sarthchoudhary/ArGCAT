@@ -45,7 +45,7 @@ def hist2d_eventID_sum(run_name: str) -> None:
     2: []
     } 
 
-    run_name = f'{run_name}_output'
+    run_name = f'{run_name[3:]}_output'
     output_subdir = path.join(output_dir, run_name)
     if not path.isdir(output_subdir):
             os.mkdir(output_subdir)
@@ -96,7 +96,7 @@ def hist2d_eventID_sum(run_name: str) -> None:
         # ax_9.set_ylim(bottom=min(y), top=sum_cutoff[ch_id]) # doesn't work yet
         ax_9.set_xlabel('EventID')
         # ax_9.set_ylabel('Full wf sum')
-        ax_9.set_ylabel('integrated charge [4ns$\cdot$ADC units]')
+        ax_9.set_ylabel('Integrated charge [4ns$\cdot$ADC units]')
         # ax_9.set_xticklabels(ax_9.get_xticklabels(), rotation=45, ha='right')
         ax_9.ticklabel_format(style='scientific', axis='both', scilimits=[-1, 2])
         # fig_9.suptitle(f'EventID vs Event wf sum in Channel {ch_id}') # commented out for paper
