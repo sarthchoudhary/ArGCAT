@@ -58,11 +58,11 @@ ax.errorbar(tau3_file['index'], tau3_file['ch2']/1000, \
             linestyle='none', ecolor='C2', label='2') #'#ADFF2F'
 
 ## plt.locator_params(axis='x', nbins=5)
-ax.set_xticks([1, 2, 3, 4, 5])
+ax.set_xticks([1.0, 2.0, 3.0, 4.0, 5.0])
 ax.set_xlabel('Run part')
 ax.set_xticklabels(['$1^{st}$','$2^{nd}$','$3^{rd}$','$4^{th}$','$5^{th}$'])
 ax.set_ylabel('Triplet lifetime [$\\mu$s]')
-ax.set_ylim(2.9, 3.6)
+ax.set_ylim(2.9, 3.7)
 ax.grid()
-ax.legend()
-fig.savefig(path.join(output_dir, 'plots','tau3_run00156.png'))
+ax.legend(loc='upper left')
+fig.savefig(path.join(output_dir, 'plots','tau3_PEN.png'))
