@@ -2,7 +2,7 @@
 ## ----------------------------------------- setting-up libraries ----------------------------------------
 # from time import perf_counter
 # t0 = perf_counter()
-import sys
+# import sys
 import numpy as np
 from matplotlib.offsetbox import AnchoredText
 import matplotlib.pyplot as plt
@@ -13,11 +13,11 @@ import pandas as pd
 # from scipy.signal import find_peaks
 # from scipy.optimize import curve_fit
 from os import path
-import os
+# import os
 # import argparse
 
 ## ----------------------------------- matplotlib RC etc -----------------------------------------
-rc('figure', autolayout=True, figsize=[10, 6], dpi=125, titlesize=20 )
+rc('figure', autolayout=True, figsize=[10, 6], dpi=75, titlesize=20 )
 rc('font', family='monospace')
 rc('axes', titlesize=20, titleweight='heavy', labelsize=16, labelweight='bold')
 rc(('xtick', 'ytick'), labelsize = 18)
@@ -43,21 +43,21 @@ tau3_file = pd.read_csv(path.join(output_dir, 'results','tau3_run00156_trunc.csv
 ## ----------------------------------------- Program -----------------------------------------
 fig, ax = plt.subplots()
 
-ax.scatter(tau3_file['index'], tau3_file['ch0']/1000, s=128, alpha=0.5, label='Ch0', color='C0')
-ax.scatter(tau3_file['index'], tau3_file['ch1']/1000, s=128, alpha=0.5, label='Ch1', color='C1')
-ax.scatter(tau3_file['index'], tau3_file['ch2']/1000, s=128, alpha=0.5, label='Ch2', color='C2')
+# ax.scatter(tau3_file['index'], tau3_file['ch0']/1000, s=128, alpha=0.5, label='0', color='C0')
+# ax.scatter(tau3_file['index'], tau3_file['ch1']/1000, s=128, alpha=0.5, label='1', color='C1')
+# ax.scatter(tau3_file['index'], tau3_file['ch2']/1000, s=128, alpha=0.5, label='2', color='C2')
 
-# ax.errorbar(tau3_file['index'], tau3_file['ch0']/1000, \
-#             yerr = tau3_file['ch0_sigma']/1000, fmt='o', elinewidth=1.0, \
-#             linestyle='none', ecolor='C0', label='Ch0') #'#ADFF2F'
-# ax.errorbar(tau3_file['index'], tau3_file['ch1']/1000, \
-#             yerr = tau3_file['ch1_sigma']/1000, fmt='o', elinewidth=1.0, \
-#             linestyle='none', ecolor='C1', label='Ch1') #'#ADFF2F'
-# ax.errorbar(tau3_file['index'], tau3_file['ch2']/1000, \
-#             yerr = tau3_file['ch2_sigma']/1000, fmt='o', elinewidth=1.0, \
-#             linestyle='none', ecolor='C2', label='Ch2') #'#ADFF2F'
+ax.errorbar(tau3_file['index'], tau3_file['ch0']/1000, \
+            yerr = np.sqrt(tau3_file['ch0_chisqr'])*tau3_file['ch0_sigma']/1000, fmt='o', elinewidth=1.0, \
+            linestyle='none', ecolor='C0', label='0') #'#ADFF2F'
+ax.errorbar(tau3_file['index'], tau3_file['ch1']/1000, \
+            yerr = np.sqrt(tau3_file['ch1_chisqr'])*tau3_file['ch1_sigma']/1000, fmt='o', elinewidth=1.0, \
+            linestyle='none', ecolor='C1', label='1') #'#ADFF2F'
+ax.errorbar(tau3_file['index'], tau3_file['ch2']/1000, \
+            yerr = np.sqrt(tau3_file['ch2_chisqr'])*tau3_file['ch2_sigma']/1000, fmt='o', elinewidth=1.0, \
+            linestyle='none', ecolor='C2', label='2') #'#ADFF2F'
 
-# plt.locator_params(axis='x', nbins=5)
+## plt.locator_params(axis='x', nbins=5)
 ax.set_xticks([1, 2, 3, 4, 5])
 ax.set_xlabel('Run part')
 ax.set_xticklabels(['$1^{st}$','$2^{nd}$','$3^{rd}$','$4^{th}$','$5^{th}$'])
