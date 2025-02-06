@@ -2,7 +2,6 @@
 *.root
 /__pycache__
 /backup
-/data
 /finger_plots
 /output_folder
 /plots
