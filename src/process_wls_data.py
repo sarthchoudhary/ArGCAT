@@ -602,13 +602,7 @@ for event_x in range(wfs.shape[0]):
     com_dict[2].append(com_arr[2])
 del com_arr
 
-## pulse difference histogram
-
 flt_dict = create_flt_wfs(wfs) # pass it to pulse_difference
-
-# pulse_difference_ls = [] # TEMP
-
-# hist_pulse_difference() # TEMP
 
 ## ----------------------------------------- Histograms -----------------------------------------
 
@@ -676,11 +670,12 @@ event_PassList= []
 event_FailList_3rdCut= []
 # wf_sum_post_cut_ls = []
 
+## pulse difference histogram
 pulse_difference_ls = []
 
 apply_cuts(wfs)
 
-hist_pulse_difference()
+# hist_pulse_difference() # unComment if pulse difference histogram is desired.
 
 # hist_plot_range = (0e6, 5e6) #run00126
 hist_plot_range = (0.0, 1.0e6) #combined run00156 
@@ -745,7 +740,7 @@ save_plot(fig_3, 'hist_COM_post_cut')
 plt.close(fig_3)
 ## ----------------------------------------- Time Constant -----------------------------------------
 
-# fit_param_dict, red_chisqr_dict = calculate_time_constant()
+fit_param_dict, red_chisqr_dict = calculate_time_constant()
 # calculate_time_constant() ## optional: useful when disabling fit to entire run
 
 # ## ------------------------------ Fit Gauss to integrated Charge Distribution ----------------------
