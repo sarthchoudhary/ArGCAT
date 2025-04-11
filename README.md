@@ -1,7 +1,7 @@
 # About
 [Argon Gas Setup (ArGSet)](https://gitlab.camk.edu.pl/mkuzniak/cezamat/-/wikis/ArgSet) is a gas cell that supports the measurement of fluorescence from cryogenically cooled materials excited by argon scintillation light.
 
-This codebase contains the code for photosensor calibration and data analysis for ArGSet. 
+ArGSet Calibration and Analysis Tools (ArGCAT) codebase has been developed for photosensor calibration and performing data analysis.
 
 # Codebase Layout
 - 'main' branch contains the code calibration of Silicon Photomultiplier (SiPM).
