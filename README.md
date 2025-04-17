@@ -13,6 +13,7 @@ To satify all requirements do these:
 2. edit jar.yml to change prefix a/c to your miniconda installation.
 3. `conda env create -f jar.yml`
 4. This will not install peakdetect package which needs to be installed via pip. Also, peakdetect is outdated package, its source code needs to be tweaked slightly to make use of newer versions of scipy FFT. Pyreco has separate installation steps. See [pyreco repository](https://gitlab.camk.edu.pl/mkuzniak/pyreco).
+5. Remember to switch Pyreco repository to 'zle_midas' branch for LED data or 'zle_4ksamp_length' for WLS data.
 
 # Computing resources
 wf search script consumes a lot of computing resources, it should only be executed on an interactive node or submitted as a slurm job.\
